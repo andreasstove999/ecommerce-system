@@ -10,3 +10,27 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+
+  cart-service-go:
+    build:
+      context: ../services/cart-service-go
+      dockerfile: Dockerfile
+    container_name: cart-service-go
+    environment:
+      - PORT=8081
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - CART_DB_DSN=postgres://cart_user:cart_pass@cart-db:5432/cart_db?sslmode=disable
+    depends_on:
+      - rabbitmq
+      - cart-db
+    ports:
+      - "8081:8081"
+
+  cart-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=cart_db
+      - POSTGRES_USER=cart_user
+      - POSTGRES_PASSWORD=cart_pass
+    ports:
+      - "5433:5432"
