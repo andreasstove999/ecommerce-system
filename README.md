@@ -142,5 +142,3 @@ It includes flows such as:
 - Show event-driven collaboration between services
 - Implement polyglot distributed system patterns
 - Full local reproducibility using Docker
-- Provide strong portfolio material for backend/distributed systems engineering roles
-
