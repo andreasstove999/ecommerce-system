@@ -1,0 +1,328 @@
+{
+    "info": {
+      "_postman_id": "2b684d4a-ea81-4a9f-b6f6-4dce2acdbf41",
+      "name": "Cart Service Flow",
+      "description": "End-to-end flow for the Cart Service including health check, adding items, checkout and verifying empty cart.",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "01 - Health",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/health",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "health"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 200\", function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test(\"Service is ok\", function () {",
+                "    const body = pm.response.json();",
+                "    pm.expect(body.status).to.eql(\"ok\");",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "02 - Get cart (empty)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 404\", function () {",
+                "    pm.response.to.have.status(404);",
+                "});",
+                "",
+                "pm.test(\"Error message is 'cart not found'\", function () {",
+                "    const body = pm.response.json();",
+                "    pm.expect(body.error).to.eql(\"cart not found\");",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "03 - Add item 1",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"productId\": \"p1\",\n  \"quantity\": 2,\n  \"price\": 100.0\n}"
+          },
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}/items",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}",
+              "items"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 200\", function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "const body = pm.response.json();",
+                "",
+                "pm.test(\"Cart has correct userId\", function () {",
+                "    pm.expect(body.userId).to.eql(pm.environment.get(\"userId\"));",
+                "});",
+                "",
+                "pm.test(\"Cart has one item\", function () {",
+                "    pm.expect(body.items).to.be.an(\"array\");",
+                "    pm.expect(body.items.length).to.eql(1);",
+                "});",
+                "",
+                "pm.test(\"Item 1 is correct\", function () {",
+                "    const item = body.items[0];",
+                "    pm.expect(item.productId).to.eql(\"p1\");",
+                "    pm.expect(item.quantity).to.eql(2);",
+                "    pm.expect(item.price).to.eql(100.0);",
+                "});",
+                "",
+                "pm.environment.set(\"cartId\", body.cartId);"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "04 - Add item 2",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"productId\": \"p2\",\n  \"quantity\": 1,\n  \"price\": 50.0\n}"
+          },
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}/items",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}",
+              "items"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 200\", function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "const body = pm.response.json();",
+                "",
+                "pm.test(\"Cart still belongs to same user\", function () {",
+                "    pm.expect(body.userId).to.eql(pm.environment.get(\"userId\"));",
+                "});",
+                "",
+                "pm.test(\"Cart has two items\", function () {",
+                "    pm.expect(body.items.length).to.eql(2);",
+                "});",
+                "",
+                "pm.test(\"TotalAmount is 250\", function () {",
+                "    pm.expect(body.totalAmount).to.eql(250.0);",
+                "});",
+                "",
+                "pm.environment.set(\"cartTotal\", body.totalAmount);",
+                "pm.environment.set(\"cartItemsCount\", body.items.length.toString());"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "05 - Get cart (with items)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 200\", function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "const body = pm.response.json();",
+                "",
+                "pm.test(\"Cart has correct userId\", function () {",
+                "    pm.expect(body.userId).to.eql(pm.environment.get(\"userId\"));",
+                "});",
+                "",
+                "pm.test(\"Cart has two items\", function () {",
+                "    pm.expect(body.items.length).to.eql(2);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "06 - Checkout",
+        "request": {
+          "method": "POST",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}/checkout",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}",
+              "checkout"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 200\", function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "const body = pm.response.json();",
+                "",
+                "pm.test(\"Checkout completed\", function () {",
+                "    pm.expect(body.status).to.eql(\"checkout completed\");",
+                "});",
+                "",
+                "pm.test(\"Correct user and cart\", function () {",
+                "    pm.expect(body.userId).to.eql(pm.environment.get(\"userId\"));",
+                "    const saved = pm.environment.get(\"cartId\");",
+                "    if (saved) pm.expect(body.cartId).to.eql(saved);",
+                "});",
+                "",
+                "pm.test(\"Totals match previous cart\", function () {",
+                "    const prevTotal = Number(pm.environment.get(\"cartTotal\") || \"0\");",
+                "    const prevCount = Number(pm.environment.get(\"cartItemsCount\") || \"0\");",
+                "    pm.expect(body.totalAmount).to.eql(prevTotal);",
+                "    pm.expect(body.itemsCount).to.eql(prevCount);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "07 - Get cart after checkout",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/api/cart/{{userId}}",
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "path": [
+              "api",
+              "cart",
+              "{{userId}}"
+            ]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test(\"Status is 404\", function () {",
+                "    pm.response.to.have.status(404);",
+                "});",
+                "",
+                "pm.test(\"Cart removed after checkout\", function () {",
+                "    const body = pm.response.json();",
+                "    pm.expect(body.error).to.eql(\"cart not found\");",
+                "});"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+  
