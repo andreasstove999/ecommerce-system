@@ -6,13 +6,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/db"
 	httpserver "github.com/andreasstove999/ecommerce-system/cart-service-go/internal/http"
 )
 
 func main() {
 	port := getEnv("PORT", "8081") // cart can use 8081
 
-	mux := httpserver.NewRouter()
+	// Open DB and create repository
+	database := db.MustOpen()
+	defer database.Close()
+	cartRepo := cart.NewRepository(database)
+
+	mux := httpserver.NewRouter(cartRepo)
 
 	srv := &http.Server{
 		Addr:         ":" + port,

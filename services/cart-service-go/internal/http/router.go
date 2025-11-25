@@ -3,16 +3,20 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(cartRepo cart.Repository) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", healthHandler)
+	// Wiring for cart
+	cartHandler := NewCartHandler(cartRepo)
 
-	// Cart-specific endpoints will be added here later.
-	// e.g. /api/cart, /api/cart/{userId}/items, /api/cart/{userId}/checkout
-
+	mux.HandleFunc("POST /api/cart/{userId}/items", cartHandler.AddItem)     // add/update item
+	mux.HandleFunc("GET /api/cart/{userId}", cartHandler.GetCart)            // fetch cart
+	mux.HandleFunc("POST /api/cart/{userId}/checkout", cartHandler.Checkout) // publish event
 	return mux
 }
 
