@@ -7,16 +7,19 @@ import (
 	"time"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
-	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 	"github.com/google/uuid"
 )
 
 type CartHandler struct {
 	repo           cart.Repository
-	eventPublisher *events.RabbitCartEventsPublisher
+	eventPublisher CartEventsPublisher
 }
 
-func NewCartHandler(repo cart.Repository, eventPublisher *events.RabbitCartEventsPublisher) *CartHandler {
+type CartEventsPublisher interface {
+	PublishCartCheckedOut(ctx context.Context, c *cart.Cart) error
+}
+
+func NewCartHandler(repo cart.Repository, eventPublisher CartEventsPublisher) *CartHandler {
 	return &CartHandler{repo: repo, eventPublisher: eventPublisher}
 }
 

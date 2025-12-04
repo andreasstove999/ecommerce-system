@@ -5,10 +5,9 @@ import (
 	"net/http"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
-	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 )
 
-func NewRouter(cartRepo cart.Repository, cartPublisher *events.RabbitCartEventsPublisher) http.Handler {
+func NewRouter(cartRepo cart.Repository, cartPublisher CartEventsPublisher) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", healthHandler)
