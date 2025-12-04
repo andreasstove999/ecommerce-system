@@ -5,14 +5,15 @@ import (
 	"net/http"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 )
 
-func NewRouter(cartRepo cart.Repository) http.Handler {
+func NewRouter(cartRepo cart.Repository, cartPublisher *events.RabbitCartEventsPublisher) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", healthHandler)
 	// Wiring for cart
-	cartHandler := NewCartHandler(cartRepo)
+	cartHandler := NewCartHandler(cartRepo, cartPublisher)
 
 	mux.HandleFunc("POST /api/cart/{userId}/items", cartHandler.AddItem)     // add/update item
 	mux.HandleFunc("GET /api/cart/{userId}", cartHandler.GetCart)            // fetch cart

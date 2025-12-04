@@ -13,9 +13,10 @@ import (
 	httphandler "github.com/andreasstove999/ecommerce-system/cart-service-go/internal/http"
 )
 
+// TODO: add RabbitCartEventsPublisher mock
 func TestGetCart(t *testing.T) {
 	t.Run("missing user id", func(t *testing.T) {
-		handler := httphandler.NewCartHandler(&RepositoryMock{})
+		handler := httphandler.NewCartHandler(&RepositoryMock{}, nil)
 		r := httptest.NewRequest(http.MethodGet, "/api/cart/", nil)
 		w := httptest.NewRecorder()
 
@@ -30,7 +31,7 @@ func TestGetCart(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
 			return nil, errors.New("db error")
 		}}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodGet, "/api/cart/123", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -46,7 +47,7 @@ func TestGetCart(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
 			return nil, nil
 		}}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodGet, "/api/cart/123", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -63,7 +64,7 @@ func TestGetCart(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
 			return expected, nil
 		}}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodGet, "/api/cart/123", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -89,7 +90,7 @@ func TestGetCart(t *testing.T) {
 
 func TestAddItem(t *testing.T) {
 	t.Run("invalid json", func(t *testing.T) {
-		handler := httphandler.NewCartHandler(&RepositoryMock{})
+		handler := httphandler.NewCartHandler(&RepositoryMock{}, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/items", bytes.NewBufferString("{"))
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -105,7 +106,7 @@ func TestAddItem(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
 			return nil, errors.New("load error")
 		}}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/items", bytes.NewBufferString(`{"productId":"p1","quantity":1,"price":2}`))
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -126,7 +127,7 @@ func TestAddItem(t *testing.T) {
 				return nil
 			},
 		}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		body := bytes.NewBufferString(`{"productId":"p1","quantity":2,"price":3}`)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/items", body)
 		r.SetPathValue("userId", "123")
@@ -158,7 +159,7 @@ func TestAddItem(t *testing.T) {
 				return nil
 			},
 		}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		body := bytes.NewBufferString(`{"productId":"p1","quantity":2,"price":5}`)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/items", body)
 		r.SetPathValue("userId", "123")
@@ -185,7 +186,7 @@ func TestAddItem(t *testing.T) {
 			GetCartFunc:    func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return nil, nil },
 			UpsertCartFunc: func(ctx context.Context, c *cartpkg.Cart) error { return errors.New("save failed") },
 		}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		body := bytes.NewBufferString(`{"productId":"p1","quantity":1,"price":2}`)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/items", body)
 		r.SetPathValue("userId", "123")
@@ -201,7 +202,7 @@ func TestAddItem(t *testing.T) {
 
 func TestCheckout(t *testing.T) {
 	t.Run("missing user", func(t *testing.T) {
-		handler := httphandler.NewCartHandler(&RepositoryMock{})
+		handler := httphandler.NewCartHandler(&RepositoryMock{}, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/", nil)
 		w := httptest.NewRecorder()
 
@@ -214,7 +215,7 @@ func TestCheckout(t *testing.T) {
 
 	t.Run("load error", func(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return nil, errors.New("db") }}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -228,7 +229,7 @@ func TestCheckout(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return nil, nil }}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -245,7 +246,7 @@ func TestCheckout(t *testing.T) {
 			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return &cartpkg.Cart{}, nil },
 			ClearCartFunc: func(ctx context.Context, userID string) error { return errors.New("clear fail") },
 		}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -262,7 +263,7 @@ func TestCheckout(t *testing.T) {
 			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return &cartpkg.Cart{}, nil },
 			ClearCartFunc: func(ctx context.Context, userID string) error { return nil },
 		}
-		handler := httphandler.NewCartHandler(repo)
+		handler := httphandler.NewCartHandler(repo, nil)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()

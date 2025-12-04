@@ -7,16 +7,17 @@ import (
 	"time"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 	"github.com/google/uuid"
 )
 
 type CartHandler struct {
-	repo cart.Repository
-	//eventPublisher events.EventPublisher
+	repo           cart.Repository
+	eventPublisher *events.RabbitCartEventsPublisher
 }
 
-func NewCartHandler(repo cart.Repository) *CartHandler {
-	return &CartHandler{repo: repo}
+func NewCartHandler(repo cart.Repository, eventPublisher *events.RabbitCartEventsPublisher) *CartHandler {
+	return &CartHandler{repo: repo, eventPublisher: eventPublisher}
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +143,10 @@ func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Publish event (later you add real RabbitMQ)
-	// TODO (later): publish CartCheckedOut event here
+	if err := h.eventPublisher.PublishCartCheckedOut(ctx, c); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to publish cart checked out event")
+		return
+	}
 
 	// Clear DB cart
 	if err := h.repo.ClearCart(ctx, userID); err != nil {

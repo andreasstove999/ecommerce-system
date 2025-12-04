@@ -8,6 +8,7 @@ import (
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/db"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 	httpserver "github.com/andreasstove999/ecommerce-system/cart-service-go/internal/http"
 )
 
@@ -19,7 +20,15 @@ func main() {
 	defer database.Close()
 	cartRepo := cart.NewRepository(database)
 
-	mux := httpserver.NewRouter(cartRepo)
+	rabbitConn := events.MustDialRabbit()
+	defer rabbitConn.Close()
+
+	cartPublisher, err := events.NewRabbitCartEventsPublisher(rabbitConn)
+	if err != nil {
+		log.Fatalf("failed to create cart publisher: %v", err)
+	}
+
+	mux := httpserver.NewRouter(cartRepo, cartPublisher)
 
 	srv := &http.Server{
 		Addr:         ":" + port,
