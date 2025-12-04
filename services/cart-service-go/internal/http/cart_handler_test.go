@@ -201,8 +201,8 @@ func TestAddItem(t *testing.T) {
 }
 
 func TestCheckout(t *testing.T) {
-	t.Run("missing user", func(t *testing.T) {
-		handler := httphandler.NewCartHandler(&RepositoryMock{}, nil)
+	t.Run("missing user id", func(t *testing.T) {
+		handler := httphandler.NewCartHandler(&RepositoryMock{}, &RabbitCartEventsPublisherMock{})
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/", nil)
 		w := httptest.NewRecorder()
 
@@ -214,8 +214,10 @@ func TestCheckout(t *testing.T) {
 	})
 
 	t.Run("load error", func(t *testing.T) {
-		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return nil, errors.New("db") }}
-		handler := httphandler.NewCartHandler(repo, nil)
+		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
+			return nil, errors.New("db error")
+		}}
+		handler := httphandler.NewCartHandler(repo, &RabbitCartEventsPublisherMock{})
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -227,9 +229,11 @@ func TestCheckout(t *testing.T) {
 		}
 	})
 
-	t.Run("not found", func(t *testing.T) {
-		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return nil, nil }}
-		handler := httphandler.NewCartHandler(repo, nil)
+	t.Run("cart not found", func(t *testing.T) {
+		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
+			return nil, nil
+		}}
+		handler := httphandler.NewCartHandler(repo, &RabbitCartEventsPublisherMock{})
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -241,12 +245,14 @@ func TestCheckout(t *testing.T) {
 		}
 	})
 
-	t.Run("clear error", func(t *testing.T) {
-		repo := &RepositoryMock{
-			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return &cartpkg.Cart{}, nil },
-			ClearCartFunc: func(ctx context.Context, userID string) error { return errors.New("clear fail") },
-		}
-		handler := httphandler.NewCartHandler(repo, nil)
+	t.Run("publish error", func(t *testing.T) {
+		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
+			return &cartpkg.Cart{ID: "c1", UserID: userID}, nil
+		}}
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error {
+			return errors.New("publish failed")
+		}}
+		handler := httphandler.NewCartHandler(repo, publisher)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -256,14 +262,47 @@ func TestCheckout(t *testing.T) {
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", w.Code)
 		}
+		if len(publisher.PublishCartCheckedOutCalls()) != 1 {
+			t.Fatalf("expected publish to be called once, got %d", len(publisher.PublishCartCheckedOutCalls()))
+		}
+	})
+
+	t.Run("clear error", func(t *testing.T) {
+		cart := &cartpkg.Cart{ID: "c1", UserID: "123"}
+		repo := &RepositoryMock{
+			GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return cart, nil },
+			ClearCartFunc: func(ctx context.Context, userID string) error {
+				return errors.New("clear failed")
+			},
+		}
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error { return nil }}
+		handler := httphandler.NewCartHandler(repo, publisher)
+		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
+		r.SetPathValue("userId", "123")
+		w := httptest.NewRecorder()
+
+		handler.Checkout(w, r)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+		if len(publisher.PublishCartCheckedOutCalls()) != 1 {
+			t.Fatalf("expected publish to be called once, got %d", len(publisher.PublishCartCheckedOutCalls()))
+		}
 	})
 
 	t.Run("success", func(t *testing.T) {
+		cart := &cartpkg.Cart{ID: "c1", UserID: "123"}
+		cleared := false
 		repo := &RepositoryMock{
-			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return &cartpkg.Cart{}, nil },
-			ClearCartFunc: func(ctx context.Context, userID string) error { return nil },
+			GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return cart, nil },
+			ClearCartFunc: func(ctx context.Context, userID string) error {
+				cleared = true
+				return nil
+			},
 		}
-		handler := httphandler.NewCartHandler(repo, nil)
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error { return nil }}
+		handler := httphandler.NewCartHandler(repo, publisher)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
 		w := httptest.NewRecorder()
@@ -272,6 +311,12 @@ func TestCheckout(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		if len(publisher.PublishCartCheckedOutCalls()) != 1 {
+			t.Fatalf("expected publish to be called once, got %d", len(publisher.PublishCartCheckedOutCalls()))
+		}
+		if !cleared {
+			t.Fatalf("expected cart to be cleared")
 		}
 	})
 }
