@@ -38,7 +38,8 @@ services:
       - ../services/cart-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
   order-service-go:
     build:
-      context: ./services/order-service-go
+      context: ../services/order-service-go
+      dockerfile: Dockerfile
     container_name: order-service-go
     environment:
       - PORT=8082
@@ -58,4 +59,4 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./services/order-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ../services/order-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
