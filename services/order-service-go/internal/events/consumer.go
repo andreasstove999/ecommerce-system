@@ -9,6 +9,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/order"
 )
 
 // MustDialRabbit connects to RabbitMQ or panics on failure.
@@ -194,4 +196,28 @@ func (c *Consumer) publishToDLQ(ctx context.Context, originalQueue string, body 
 			Headers:      headers,
 		},
 	)
+}
+
+// StartCartCheckedOutConsumer starts a consumer that listens for CartCheckedOut
+// events and persists orders using the provided repository.
+// It returns the consumer, a cleanup function for the publisher, and any error encountered.
+func StartCartCheckedOutConsumer(ctx context.Context, conn *amqp.Connection, repo order.Repository, logger *log.Logger) (*Consumer, func(), error) {
+	pub, err := NewPublisher(conn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create publisher: %w", err)
+	}
+
+	consumer := NewConsumer(conn, logger)
+	consumer.Register(QueueCartCheckedOut, CartCheckedOutHandler(repo, pub, logger))
+
+	if err := consumer.Start(ctx); err != nil {
+		_ = pub.Close()
+		return nil, nil, fmt.Errorf("start consumer: %w", err)
+	}
+
+	cleanup := func() {
+		_ = pub.Close()
+	}
+
+	return consumer, cleanup, nil
 }
