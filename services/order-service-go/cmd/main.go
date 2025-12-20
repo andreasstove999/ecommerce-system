@@ -20,9 +20,16 @@ func main() {
 
 	logger := log.New(os.Stdout, "[order-service] ", log.LstdFlags|log.Lshortfile)
 
+	// Run database migrations
+	dsn := db.GetDSN()
+	if err := db.RunMigrations(dsn, logger); err != nil {
+		logger.Fatalf("run migrations: %v", err)
+	}
+
 	// DB
 	database := db.MustOpen()
 	orderRepo := order.NewRepository(database)
+	defer database.Close()
 
 	// RabbitMQ
 	rabbitConn := eventserver.MustDialRabbit()
@@ -32,7 +39,21 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := eventserver.StartCartCheckedOutConsumer(ctx, rabbitConn, orderRepo, logger); err != nil {
+	// Publisher (needed by some handlers)
+	pub, err := eventserver.NewPublisher(rabbitConn)
+	if err != nil {
+		logger.Fatalf("create publisher: %v", err)
+	}
+	defer pub.Close()
+
+	// Create and configure consumer with all handlers
+	consumer := eventserver.NewConsumer(rabbitConn, logger)
+	consumer.Register(eventserver.QueueCartCheckedOut, eventserver.CartCheckedOutHandler(orderRepo, pub, logger))
+	consumer.Register(eventserver.QueuePaymentSucceeded, eventserver.PaymentSucceededHandler(orderRepo, pub, logger))
+	consumer.Register(eventserver.QueuePaymentFailed, eventserver.PaymentFailedHandler(orderRepo, logger))
+	consumer.Register(eventserver.QueueStockReserved, eventserver.StockReservedHandler(orderRepo, pub, logger))
+
+	if err := consumer.Start(ctx); err != nil {
 		logger.Fatalf("start consumer: %v", err)
 	}
 

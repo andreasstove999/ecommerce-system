@@ -13,16 +13,16 @@ flowchart LR
     end
 
     subgraph Gateway
-        GW[API Gateway (Go)]
+        GW["API Gateway (Go)"]
     end
 
     subgraph Services
-        CART[Cart Service (Go)]
-        ORDER[Order Service (Go)]
-        CATALOG[Catalog Service (Java)]
-        PAYMENT[Payment Service (.NET)]
-        INVENTORY[Inventory Service (Go)]
-        SHIPPING[Shipping Service (Java)]
+        CART["Cart Service (Go)"]
+        ORDER["Order Service (Go)"]
+        CATALOG["Catalog Service (Java)"]
+        PAYMENT["Payment Service (.NET)"]
+        INVENTORY["Inventory Service (Go)"]
+        SHIPPING["Shipping Service (Java)"]
     end
 
     subgraph Infra

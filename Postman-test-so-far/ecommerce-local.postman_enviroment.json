@@ -1,0 +1,63 @@
+{
+    "id": "f6f6d4c1-0a46-4f53-9c07-7d9c5cc4c1a1",
+    "name": "ecommerce-local",
+    "values": [
+        {
+            "key": "cartBaseUrl",
+            "value": "http://localhost:8081",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "orderBaseUrl",
+            "value": "http://localhost:8082",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "userId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "productId",
+            "value": "p1",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "quantity",
+            "value": "2",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "price",
+            "value": "100",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "orderId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "pollTry",
+            "value": "0",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "pollMax",
+            "value": "12",
+            "type": "default",
+            "enabled": true
+        }
+    ],
+    "_postman_variable_scope": "environment",
+    "_postman_exported_at": "2025-12-20T00:00:00.000Z",
+    "_postman_exported_using": "Postman/11"
+}
