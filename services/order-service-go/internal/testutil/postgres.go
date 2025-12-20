@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -66,8 +67,9 @@ func StartPostgres(t *testing.T) (*sql.DB, func()) {
 	require.NoError(t, err)
 	require.NoError(t, waitForDB(ctx, db))
 
-	schemaPath, err := filepath.Abs(filepath.Join("internal", "db", "schema.sql"))
-	require.NoError(t, err)
+	_, filename, _, ok := runtime.Caller(0)
+	require.True(t, ok, "failed to get current file path")
+	schemaPath := filepath.Join(filepath.Dir(filename), "..", "db", "schema.sql")
 
 	schema, err := os.ReadFile(schemaPath)
 	require.NoError(t, err)
