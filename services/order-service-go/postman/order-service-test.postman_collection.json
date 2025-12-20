@@ -1,0 +1,208 @@
+{
+    "info": {
+        "_postman_id": "3d2ef0cf-3e39-4a2d-b2d8-1e2f53bb2a3c",
+        "name": "Order Service - Tests",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health - GET /health",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseUrl}}/health",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "",
+                            "pm.test('Response is JSON', function () {",
+                            "  pm.response.to.be.json;",
+                            "});",
+                            "",
+                            "const json = pm.response.json();",
+                            "pm.test('Health payload has status ok', function () {",
+                            "  pm.expect(json).to.have.property('status');",
+                            "  pm.expect(json.status).to.eql('ok');",
+                            "});",
+                            "",
+                            "pm.test('Health payload has service=order-service', function () {",
+                            "  pm.expect(json).to.have.property('service');",
+                            "  pm.expect(json.service).to.eql('order-service');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "List Orders By User - GET /api/users/{userId}/orders",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseUrl}}/api/users/{{userId}}/orders",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "users",
+                        "{{userId}}",
+                        "orders"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "",
+                            "pm.test('Response is JSON array', function () {",
+                            "  pm.response.to.be.json;",
+                            "  const json = pm.response.json();",
+                            "  pm.expect(json).to.be.an('array');",
+                            "});",
+                            "",
+                            "const orders = pm.response.json();",
+                            "",
+                            "// If there are orders, store the first orderId for the next request",
+                            "if (Array.isArray(orders) && orders.length > 0) {",
+                            "  pm.environment.set('orderId', orders[0].orderId || orders[0].id);",
+                            "  pm.test('Stored orderId from first order', function () {",
+                            "    pm.expect(pm.environment.get('orderId')).to.not.be.empty;",
+                            "  });",
+                            "",
+                            "  // Basic schema checks on the first order",
+                            "  const o = orders[0];",
+                            "  pm.test('First order has required fields', function () {",
+                            "    pm.expect(o).to.have.property('orderId');",
+                            "    pm.expect(o).to.have.property('cartId');",
+                            "    pm.expect(o).to.have.property('userId');",
+                            "    pm.expect(o).to.have.property('items');",
+                            "    pm.expect(o).to.have.property('totalAmount');",
+                            "    pm.expect(o).to.have.property('createdAt');",
+                            "  });",
+                            "",
+                            "  pm.test('First order.userId matches environment userId', function () {",
+                            "    pm.expect(o.userId).to.eql(pm.environment.get('userId'));",
+                            "  });",
+                            "",
+                            "  pm.test('items is an array', function () {",
+                            "    pm.expect(o.items).to.be.an('array');",
+                            "  });",
+                            "} else {",
+                            "  pm.environment.unset('orderId');",
+                            "  pm.test('No orders found for user (not a failure)', function () {",
+                            "    pm.expect(true).to.eql(true);",
+                            "  });",
+                            "  console.warn('No orders returned. Create an order via cart checkout + RabbitMQ, then rerun.');",
+                            "}"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Get Order - GET /api/orders/{orderId}",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "orders",
+                        "{{orderId}}"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "// If orderId isn't set (e.g., no orders in previous step), skip this request gracefully.",
+                            "const orderId = pm.environment.get('orderId');",
+                            "if (!orderId) {",
+                            "  console.warn('orderId is not set. Skipping Get Order request.');",
+                            "  postman.setNextRequest(null);",
+                            "}"
+                        ]
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status code is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "",
+                            "pm.test('Response is JSON object', function () {",
+                            "  pm.response.to.be.json;",
+                            "  const json = pm.response.json();",
+                            "  pm.expect(json).to.be.an('object');",
+                            "});",
+                            "",
+                            "const o = pm.response.json();",
+                            "",
+                            "pm.test('Order has required fields', function () {",
+                            "  pm.expect(o).to.have.property('orderId');",
+                            "  pm.expect(o).to.have.property('cartId');",
+                            "  pm.expect(o).to.have.property('userId');",
+                            "  pm.expect(o).to.have.property('items');",
+                            "  pm.expect(o).to.have.property('totalAmount');",
+                            "  pm.expect(o).to.have.property('createdAt');",
+                            "});",
+                            "",
+                            "pm.test('orderId matches the requested orderId', function () {",
+                            "  pm.expect(o.orderId).to.eql(pm.environment.get('orderId'));",
+                            "});",
+                            "",
+                            "pm.test('userId matches environment userId (if set)', function () {",
+                            "  const envUser = pm.environment.get('userId');",
+                            "  if (envUser) pm.expect(o.userId).to.eql(envUser);",
+                            "});",
+                            "",
+                            "pm.test('items contain expected item fields (if any items exist)', function () {",
+                            "  if (Array.isArray(o.items) && o.items.length > 0) {",
+                            "    const it = o.items[0];",
+                            "    pm.expect(it).to.have.property('productId');",
+                            "    pm.expect(it).to.have.property('quantity');",
+                            "    pm.expect(it).to.have.property('price');",
+                            "  } else {",
+                            "    pm.expect(true).to.eql(true);",
+                            "  }",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}

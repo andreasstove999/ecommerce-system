@@ -36,3 +36,27 @@ services:
       - "5433:5432"
     volumes:
       - ../services/cart-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+  order-service-go:
+    build:
+      context: ../services/order-service-go
+      dockerfile: Dockerfile
+    container_name: order-service-go
+    environment:
+      - PORT=8082
+      - ORDER_DB_DSN=postgres://order_user:order_pass@order-db:5432/order_db?sslmode=disable
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - order-db
+      - rabbitmq
+    ports:
+      - "8082:8082"
+  order-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=order_db
+      - POSTGRES_USER=order_user
+      - POSTGRES_PASSWORD=order_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - ../services/order-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql

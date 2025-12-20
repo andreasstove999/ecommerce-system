@@ -1,0 +1,27 @@
+{
+    "id": "6b0a6ed4-6d8a-4d0e-8a0f-1d87e0f1b8d9",
+    "name": "order-service-local",
+    "values": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8082",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "userId",
+            "value": "u42",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "orderId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        }
+    ],
+    "_postman_variable_scope": "environment",
+    "_postman_exported_at": "2025-12-20T00:00:00.000Z",
+    "_postman_exported_using": "Postman/11"
+}
