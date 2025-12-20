@@ -14,9 +14,9 @@ import (
 
 type fakeEventRepo struct {
 	createFunc              func(ctx context.Context, o *order.Order) error
-	markPaymentSucceeded    func(ctx context.Context, orderID string) (*CompletionState, error)
+	markPaymentSucceeded    func(ctx context.Context, orderID string) (*order.CompletionState, error)
 	markPaymentFailed       func(ctx context.Context, orderID string, reason string) error
-	markStockReserved       func(ctx context.Context, orderID string) (*CompletionState, error)
+	markStockReserved       func(ctx context.Context, orderID string) (*order.CompletionState, error)
 	markCompleted           func(ctx context.Context, orderID string) error
 	createdOrder            *order.Order
 	markCompletedInvoked    bool
@@ -41,7 +41,7 @@ func (f *fakeEventRepo) ListByUser(ctx context.Context, userID string) ([]order.
 	return nil, nil
 }
 
-func (f *fakeEventRepo) MarkPaymentSucceeded(ctx context.Context, orderID string) (*CompletionState, error) {
+func (f *fakeEventRepo) MarkPaymentSucceeded(ctx context.Context, orderID string) (*order.CompletionState, error) {
 	if f.markPaymentSucceeded != nil {
 		return f.markPaymentSucceeded(ctx, orderID)
 	}
@@ -57,7 +57,7 @@ func (f *fakeEventRepo) MarkPaymentFailed(ctx context.Context, orderID string, r
 	return nil
 }
 
-func (f *fakeEventRepo) MarkStockReserved(ctx context.Context, orderID string) (*CompletionState, error) {
+func (f *fakeEventRepo) MarkStockReserved(ctx context.Context, orderID string) (*order.CompletionState, error) {
 	if f.markStockReserved != nil {
 		return f.markStockReserved(ctx, orderID)
 	}
@@ -119,8 +119,8 @@ func TestHandleCartCheckedOut_CreateError(t *testing.T) {
 
 func TestHandlePaymentSucceeded_NotReady(t *testing.T) {
 	repo := &fakeEventRepo{
-		markPaymentSucceeded: func(ctx context.Context, orderID string) (*CompletionState, error) {
-			return &CompletionState{
+		markPaymentSucceeded: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
+			return &order.CompletionState{
 				UserID:          "user-1",
 				ReadyToComplete: false,
 			}, nil
@@ -136,8 +136,8 @@ func TestHandlePaymentSucceeded_NotReady(t *testing.T) {
 
 func TestHandlePaymentSucceeded_ReadyButCompleteFails(t *testing.T) {
 	repo := &fakeEventRepo{
-		markPaymentSucceeded: func(ctx context.Context, orderID string) (*CompletionState, error) {
-			return &CompletionState{
+		markPaymentSucceeded: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
+			return &order.CompletionState{
 				UserID:          "user-1",
 				ReadyToComplete: true,
 			}, nil
@@ -158,7 +158,7 @@ func TestHandlePaymentSucceeded_ReadyButCompleteFails(t *testing.T) {
 
 func TestHandlePaymentSucceeded_Error(t *testing.T) {
 	repo := &fakeEventRepo{
-		markPaymentSucceeded: func(ctx context.Context, orderID string) (*CompletionState, error) {
+		markPaymentSucceeded: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
 			return nil, errors.New("update failed")
 		},
 	}
@@ -195,8 +195,8 @@ func TestHandlePaymentFailed_Error(t *testing.T) {
 
 func TestHandleStockReserved_NotReady(t *testing.T) {
 	repo := &fakeEventRepo{
-		markStockReserved: func(ctx context.Context, orderID string) (*CompletionState, error) {
-			return &CompletionState{
+		markStockReserved: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
+			return &order.CompletionState{
 				UserID:          "user-1",
 				ReadyToComplete: false,
 			}, nil
@@ -212,8 +212,8 @@ func TestHandleStockReserved_NotReady(t *testing.T) {
 
 func TestHandleStockReserved_ReadyButCompleteFails(t *testing.T) {
 	repo := &fakeEventRepo{
-		markStockReserved: func(ctx context.Context, orderID string) (*CompletionState, error) {
-			return &CompletionState{
+		markStockReserved: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
+			return &order.CompletionState{
 				UserID:          "user-1",
 				ReadyToComplete: true,
 			}, nil
@@ -234,7 +234,7 @@ func TestHandleStockReserved_ReadyButCompleteFails(t *testing.T) {
 
 func TestHandleStockReserved_Error(t *testing.T) {
 	repo := &fakeEventRepo{
-		markStockReserved: func(ctx context.Context, orderID string) (*CompletionState, error) {
+		markStockReserved: func(ctx context.Context, orderID string) (*order.CompletionState, error) {
 			return nil, errors.New("update failed")
 		},
 	}
