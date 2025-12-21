@@ -116,62 +116,6 @@ sequenceDiagram
 
 ---
 
-## Event Contracts & Versioning (Option A)
-- Canonical JSON Schemas live in `contracts/`.
-- Envelope metadata: `eventName`, `eventVersion`, `eventId`, `correlationId`, `causationId`, `producer`, `partitionKey`, `occurredAt`, optional `sequence` (telemetry only), and `payload`.
-- Payloads carry domain data only (no transport metadata).
-- Versioning: additive changes stay within the same major version; breaking changes require a new `eventVersion` with new schema files. Older versions remain available.
-- Option A (current): correctness via idempotency + domain invariants; ordering is not required. Option B (future): ordering with buffering.
-
-### Idempotency layers
-- Transport: `eventId` is globally unique; handlers must be safe on duplicates.
-- Domain: uniqueness constraints (one order per cart, one reservation per order, one shipment per order) and sticky state machines prevent duplicate side effects even if events arrive late/out-of-order.
-
-### Correlation example (no ordering reliance)
-- `CartCheckedOut` seeds `correlationId`.
-- `OrderCreated` copies `correlationId`, sets `causationId` to the cart checkout.
-- `PaymentSucceeded` / `PaymentFailed` and `StockReserved` propagate `correlationId`, reference `OrderCreated` via `causationId`.
-- `OrderCompleted` fires once when payment succeeded **and** stock reserved, regardless of arrival order.
-- `ShippingCreated` keeps the same `correlationId`.
-
-### Using Option A safely
-- Do not assume ordered delivery; treat `sequence` as observability only.
-- Prefer “set state” over “apply delta.”
-- Make final states terminal (e.g., payment succeeded/failed).
-- Expect duplicates and late arrivals; guard with `eventId` and domain uniqueness.
-
-### Diagrams
-
-#### Envelope + payload composition
-```mermaid
-flowchart LR
-    E[EventEnvelope] -->|payload| P[Domain Payload]
-    E --> N[eventName]
-    E --> V[eventVersion]
-    E --> ID[eventId]
-    E --> CO[correlationId/causationId]
-    E --> PK[partitionKey]
-    E --> SEQ[sequence (telemetry)]
-    E --> OA[occurredAt]
-```
-
-#### Ordering-independent dedup/idempotency
-```mermaid
-sequenceDiagram
-    participant MQ as Broker
-    participant ORD as Order Service
-    MQ->>ORD: PaymentSucceeded (eventId=ps1, sequence=9)
-    ORD-->>ORD: handled eventId? if yes -> no-op
-    ORD-->>ORD: update payment_status to Succeeded (terminal)
-    MQ->>ORD: StockReserved (eventId=sr1, sequence=3)
-    ORD-->>ORD: update inventory_status to Reserved
-    ORD-->>MQ: emit OrderCompleted once (payment Succeeded AND stock Reserved)
-    MQ->>ORD: PaymentSucceeded (eventId=ps1, sequence=2) # late duplicate
-    ORD-->>ORD: eventId already handled -> no state change
-```
-
----
-
 ## Service Responsibilities
 
 ### Cart Service (Go)
@@ -216,5 +160,6 @@ sequenceDiagram
   "timestamp": "2025-01-01T12:00:00Z"
 }
 ```
+
 
 
