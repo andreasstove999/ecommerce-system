@@ -1,0 +1,23 @@
+{
+  "eventName": "PaymentFailed",
+  "eventVersion": 1,
+  "eventId": "01234567-89ab-cdef-0123-456789abcdef",
+  "correlationId": "c0a8e2b6-3c6a-4d7e-9c8f-1f2e3d4c5b6a",
+  "causationId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
+  "producer": "payment-service",
+  "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+  "sequence": 4,
+  "occurredAt": "2024-05-01T12:40:00Z",
+  "schema": "contracts/events/payment/PaymentFailed.v1.payload.schema.json",
+  "payload": {
+    "paymentId": "01234567-89ab-cdef-0123-456789abcdef",
+    "orderId": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+    "userId": "1a2b3c4d-5e6f-7081-920a-bc0d1e2f3a4b",
+    "amount": 299.97,
+    "currency": "USD",
+    "provider": "Stripe",
+    "failureCode": "card_declined",
+    "failureReason": "The card was declined by the issuing bank",
+    "failedAt": "2024-05-01T12:39:55Z"
+  }
+}

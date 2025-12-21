@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/cart/CartCheckedOut.v1.payload.schema.json",
+  "title": "CartCheckedOut Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cartId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier for the checked-out cart"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User who owns the cart"
+    },
+    "items": {
+      "type": "array",
+      "description": "Line items contained in the cart",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Product identifier"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Quantity of the product"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Unit price at checkout time"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity",
+          "price"
+        ]
+      }
+    },
+    "totalAmount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total amount charged for the cart"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the cart was checked out"
+    }
+  },
+  "required": [
+    "cartId",
+    "userId",
+    "items",
+    "totalAmount",
+    "timestamp"
+  ]
+}

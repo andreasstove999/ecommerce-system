@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/payment/PaymentFailed.v1.enveloped.schema.json",
+  "title": "PaymentFailed Event v1 (Enveloped)",
+  "allOf": [
+    {
+      "$ref": "../envelope/EventEnvelope.v1.schema.json"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventName": { "const": "PaymentFailed" },
+        "eventVersion": { "const": 1 },
+        "producer": {
+          "type": "string",
+          "enum": ["payment-service", "payment-service-dotnet"],
+          "description": "Payment service emitting failure events"
+        },
+        "partitionKey": {
+          "type": "string",
+          "description": "Use the orderId to ensure ordering per order",
+          "minLength": 1
+        },
+        "schema": {
+          "type": "string",
+          "const": "contracts/events/payment/PaymentFailed.v1.payload.schema.json"
+        },
+        "payload": {
+          "$ref": "./PaymentFailed.v1.payload.schema.json"
+        }
+      }
+    }
+  ]
+}

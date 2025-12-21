@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/order/OrderCompleted.v1.enveloped.schema.json",
+  "title": "OrderCompleted Event v1 (Enveloped)",
+  "allOf": [
+    {
+      "$ref": "../envelope/EventEnvelope.v1.schema.json"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventName": { "const": "OrderCompleted" },
+        "eventVersion": { "const": 1 },
+        "producer": {
+          "type": "string",
+          "enum": ["order-service", "order-service-go"],
+          "description": "Order service emitting completion events"
+        },
+        "partitionKey": {
+          "type": "string",
+          "description": "Use the orderId to ensure ordering per order",
+          "minLength": 1
+        },
+        "schema": {
+          "type": "string",
+          "const": "contracts/events/order/OrderCompleted.v1.payload.schema.json"
+        },
+        "payload": {
+          "$ref": "./OrderCompleted.v1.payload.schema.json"
+        }
+      }
+    }
+  ]
+}
