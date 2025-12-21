@@ -55,6 +55,36 @@
             "value": "12",
             "type": "default",
             "enabled": true
+        },
+        {
+            "key": "inventoryBaseUrl",
+            "value": "http://localhost:8083",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "initialStock",
+            "value": "10",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "expectedStockAfter",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "inventoryPollTry",
+            "value": "0",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "inventoryPollMax",
+            "value": "12",
+            "type": "default",
+            "enabled": true
         }
     ],
     "_postman_variable_scope": "environment",
