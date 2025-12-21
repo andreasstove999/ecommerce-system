@@ -1,0 +1,27 @@
+{
+  "eventName": "StockReserved",
+  "eventVersion": 1,
+  "eventId": "11112222-3333-4444-5555-666677778888",
+  "correlationId": "c0a8e2b6-3c6a-4d7e-9c8f-1f2e3d4c5b6a",
+  "causationId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
+  "producer": "inventory-service",
+  "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+  "sequence": 3,
+  "occurredAt": "2024-05-01T12:38:00Z",
+  "schema": "contracts/events/inventory/StockReserved.v1.payload.schema.json",
+  "payload": {
+    "orderId": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+    "userId": "1a2b3c4d-5e6f-7081-920a-bc0d1e2f3a4b",
+    "items": [
+      {
+        "productId": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+        "quantity": 2
+      },
+      {
+        "productId": "123e4567-e89b-12d3-a456-426614174000",
+        "quantity": 1
+      }
+    ],
+    "timestamp": "2024-05-01T12:37:45Z"
+  }
+}

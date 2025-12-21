@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/payment/PaymentFailed.v1.payload.schema.json",
+  "title": "PaymentFailed Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "paymentId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier for the attempted payment"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Order associated with the failed payment"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User linked to the payment attempt"
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Amount attempted for capture"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3,
+      "description": "ISO 4217 currency code"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Payment provider or gateway identifier",
+      "minLength": 1
+    },
+    "failureCode": {
+      "type": "string",
+      "description": "Machine readable failure code",
+      "minLength": 1
+    },
+    "failureReason": {
+      "type": "string",
+      "description": "Human-readable description of the failure",
+      "minLength": 1
+    },
+    "failedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the failure occurred"
+    }
+  },
+  "required": [
+    "paymentId",
+    "orderId",
+    "userId",
+    "amount",
+    "currency",
+    "provider",
+    "failureCode",
+    "failureReason",
+    "failedAt"
+  ]
+}

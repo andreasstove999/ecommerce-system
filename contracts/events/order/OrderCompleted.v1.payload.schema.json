@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/order/OrderCompleted.v1.payload.schema.json",
+  "title": "OrderCompleted Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier for the completed order"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User associated with the order"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the order was marked completed"
+    }
+  },
+  "required": [
+    "orderId",
+    "userId",
+    "timestamp"
+  ]
+}

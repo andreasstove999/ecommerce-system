@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/payment/PaymentSucceeded.v1.payload.schema.json",
+  "title": "PaymentSucceeded Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "paymentId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identifier for the successful payment transaction"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Order associated with the payment"
+    },
+    "userId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "User charged for the payment"
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Captured amount"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3,
+      "description": "ISO 4217 currency code"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Payment provider or gateway identifier",
+      "minLength": 1
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when payment was captured"
+    }
+  },
+  "required": [
+    "paymentId",
+    "orderId",
+    "userId",
+    "amount",
+    "currency",
+    "provider",
+    "capturedAt"
+  ]
+}

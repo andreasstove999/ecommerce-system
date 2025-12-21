@@ -1,0 +1,17 @@
+{
+  "eventName": "OrderCompleted",
+  "eventVersion": 1,
+  "eventId": "abcd1234-ab12-cd34-ef56-abcdef123456",
+  "correlationId": "c0a8e2b6-3c6a-4d7e-9c8f-1f2e3d4c5b6a",
+  "causationId": "fedcba98-7654-3210-fedc-ba9876543210",
+  "producer": "order-service",
+  "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+  "sequence": 6,
+  "occurredAt": "2024-05-01T12:50:00Z",
+  "schema": "contracts/events/order/OrderCompleted.v1.payload.schema.json",
+  "payload": {
+    "orderId": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+    "userId": "1a2b3c4d-5e6f-7081-920a-bc0d1e2f3a4b",
+    "timestamp": "2024-05-01T12:49:45Z"
+  }
+}
