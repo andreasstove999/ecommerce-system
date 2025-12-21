@@ -1,0 +1,21 @@
+{
+  "eventName": "PaymentSucceeded",
+  "eventVersion": 1,
+  "eventId": "fedcba98-7654-3210-fedc-ba9876543210",
+  "correlationId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
+  "causationId": "d1c2b3a4-e5f6-7890-abcd-ef0123456789",
+  "producer": "payment-service",
+  "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+  "sequence": 4,
+  "occurredAt": "2024-05-01T12:40:00Z",
+  "schema": "contracts/events/payment/PaymentSucceeded.v1.payload.schema.json",
+  "payload": {
+    "paymentId": "fedcba98-7654-3210-fedc-ba9876543210",
+    "orderId": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+    "userId": "1a2b3c4d-5e6f-7081-920a-bc0d1e2f3a4b",
+    "amount": 299.97,
+    "currency": "USD",
+    "provider": "Stripe",
+    "capturedAt": "2024-05-01T12:39:55Z"
+  }
+}

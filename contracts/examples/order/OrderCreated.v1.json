@@ -1,0 +1,31 @@
+{
+  "eventName": "OrderCreated",
+  "eventVersion": 1,
+  "eventId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
+  "correlationId": "6c6f05ae-2d7a-4f5c-9d1a-7f7f2f7a3af1",
+  "causationId": "6c6f05ae-2d7a-4f5c-9d1a-7f7f2f7a3af1",
+  "producer": "order-service",
+  "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+  "sequence": 2,
+  "occurredAt": "2024-05-01T12:35:10Z",
+  "schema": "contracts/events/order/OrderCreated.v1.payload.schema.json",
+  "payload": {
+    "orderId": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
+    "cartId": "7d8e9f10-1112-1314-1516-171819202122",
+    "userId": "1a2b3c4d-5e6f-7081-920a-bc0d1e2f3a4b",
+    "items": [
+      {
+        "productId": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+        "quantity": 2,
+        "price": 49.99
+      },
+      {
+        "productId": "123e4567-e89b-12d3-a456-426614174000",
+        "quantity": 1,
+        "price": 199.99
+      }
+    ],
+    "totalAmount": 299.97,
+    "timestamp": "2024-05-01T12:35:10Z"
+  }
+}

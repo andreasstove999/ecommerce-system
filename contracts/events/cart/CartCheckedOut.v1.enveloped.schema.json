@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/contracts/events/cart/CartCheckedOut.v1.enveloped.schema.json",
+  "title": "CartCheckedOut Event v1 (Enveloped)",
+  "allOf": [
+    {
+      "$ref": "../envelope/EventEnvelope.v1.schema.json"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventName": { "const": "CartCheckedOut" },
+        "eventVersion": { "const": 1 },
+        "producer": {
+          "type": "string",
+          "enum": ["cart-service", "cart-service-go"],
+          "description": "Cart service emitting the checkout event"
+        },
+        "partitionKey": {
+          "type": "string",
+          "description": "Use the cartId to ensure ordering per cart",
+          "minLength": 1
+        },
+        "schema": {
+          "type": "string",
+          "const": "contracts/events/cart/CartCheckedOut.v1.payload.schema.json"
+        },
+        "payload": {
+          "$ref": "./CartCheckedOut.v1.payload.schema.json"
+        }
+      }
+    }
+  ]
+}
