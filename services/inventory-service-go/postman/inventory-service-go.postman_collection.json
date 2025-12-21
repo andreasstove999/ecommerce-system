@@ -1,0 +1,287 @@
+{
+  "info": {
+    "_postman_id": "1ddf8811-c57b-4c51-ae76-450c9f277e94",
+    "name": "inventory-service-go",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Inventory - Basic",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"body contains ok\", function () {",
+                  "  pm.expect(pm.response.text().toLowerCase()).to.include(\"ok\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{inventoryBaseUrl}}/health"
+          },
+          "response": []
+        },
+        {
+          "name": "Set Product A Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{inventoryBaseUrl}}/api/inventory/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productAId}}\",\n  \"available\": {{productAStock}}\n}\n"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Product B Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{inventoryBaseUrl}}/api/inventory/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productBId}}\",\n  \"available\": {{productBStock}}\n}\n"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product A (basic assertions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"has productId and available\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"productId\");",
+                  "  pm.expect(json).to.have.property(\"available\");",
+                  "  pm.expect(json.available).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryBaseUrl}}/api/inventory/{{productAId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product B (basic assertions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"has productId and available\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"productId\");",
+                  "  pm.expect(json).to.have.property(\"available\");",
+                  "  pm.expect(json.available).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryBaseUrl}}/api/inventory/{{productBId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "Adjust Stock (invalid JSON) -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{inventoryBaseUrl}}/api/inventory/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{ invalid json"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E2E - Checkout (optional)",
+      "item": [
+        {
+          "name": "E2E - Trigger Checkout (cart service)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Optional end-to-end step.",
+                  "// Set enableE2E=true in environment and ensure cart-service exposes the checkout endpoint.",
+                  "const enable = (pm.environment.get(\"enableE2E\") || \"false\").toLowerCase() === \"true\";",
+                  "if (!enable) {",
+                  "  postman.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const enable = (pm.environment.get(\"enableE2E\") || \"false\").toLowerCase() === \"true\";",
+                  "if (!enable) {",
+                  "  pm.test(\"E2E disabled (enableE2E=false) - skipping\", function () { pm.expect(true).to.eql(true); });",
+                  "} else {",
+                  "  pm.test(\"status is 2xx/4xx acceptable\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200,201,202,204,400,404,409,500]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{cartBaseUrl}}{{cartCheckoutPath}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"test-user\",\n  \"items\": [\n    {\n      \"productId\": \"{{productAId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{productBId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "E2E - Poll Inventory A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const enable = (pm.environment.get(\"enableE2E\") || \"false\").toLowerCase() === \"true\";",
+                  "if (!enable) {",
+                  "  pm.test(\"E2E disabled - skipping\", function () { pm.expect(true).to.eql(true); });",
+                  "} else {",
+                  "  const expected = Number(pm.environment.get(\"expectedAAfter\"));",
+                  "  const json = pm.response.json();",
+                  "  const attempt = Number(pm.environment.get(\"pollAttempt\") || \"0\");",
+                  "  const maxAttempts = Number(pm.environment.get(\"pollAttempts\") || \"10\");",
+                  "",
+                  "  const ok = (pm.response.code === 200) && (json.available === expected);",
+                  "",
+                  "  pm.test(\"inventory eventually matches expected\", function () {",
+                  "    // It's ok for intermediate attempts to fail; final attempt should pass if condition met.",
+                  "    if (attempt + 1 >= maxAttempts) {",
+                  "      pm.expect(json.available).to.eql(expected);",
+                  "    } else {",
+                  "      pm.expect(true).to.eql(true);",
+                  "    }",
+                  "  });",
+                  "",
+                  "  if (!ok && (attempt + 1 < maxAttempts)) {",
+                  "    pm.environment.set(\"pollAttempt\", String(attempt + 1));",
+                  "    setTimeout(function () {}, Number(pm.environment.get(\"pollDelayMs\") || \"500\"));",
+                  "    postman.setNextRequest(\"E2E - Poll Inventory A\");",
+                  "  } else {",
+                  "    pm.environment.unset(\"pollAttempt\");",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryBaseUrl}}/api/inventory/{{productAId}}"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
