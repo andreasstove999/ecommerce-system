@@ -9,6 +9,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/pashagolub/pgxmock/v4 v4.9.0
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/stretchr/testify v1.9.0
 )
 
