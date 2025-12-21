@@ -40,6 +40,133 @@
             }
         },
         {
+            "name": "Inventory Health - GET /health",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{inventoryBaseUrl}}/health",
+                    "host": [
+                        "{{inventoryBaseUrl}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Inventory health status is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "pm.test('Inventory health body contains ok', function () {",
+                            "  pm.expect(pm.response.text().toLowerCase()).to.include('ok');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Inventory Seed Stock - POST /api/inventory/adjust",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"available\": {{initialStock}}\n}"
+                },
+                "url": {
+                    "raw": "{{inventoryBaseUrl}}/api/inventory/adjust",
+                    "host": [
+                        "{{inventoryBaseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "inventory",
+                        "adjust"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Seed stock status is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "pm.response.to.be.json;",
+                            "const body = pm.response.json();",
+                            "pm.test('Seed stock response is ok', function () {",
+                            "  pm.expect(body).to.have.property('ok');",
+                            "  pm.expect(body.ok).to.eql(true);",
+                            "});",
+                            "const initial = parseInt(pm.environment.get('initialStock') || '0', 10);",
+                            "const qty = parseInt(pm.environment.get('quantity') || '0', 10);",
+                            "const expected = initial - qty;",
+                            "pm.environment.set('expectedStockAfter', String(expected));",
+                            "pm.environment.set('inventoryPollTry', '0');",
+                            "pm.test('Expected stock after checkout is non-negative', function () {",
+                            "  pm.expect(expected).to.be.at.least(0);",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Inventory Verify Seed - GET /api/inventory/{productId}",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{inventoryBaseUrl}}/api/inventory/{{productId}}",
+                    "host": [
+                        "{{inventoryBaseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "inventory",
+                        "{{productId}}"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Seed verification status is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "pm.response.to.be.json;",
+                            "const inv = pm.response.json();",
+                            "pm.test('Seeded inventory matches initialStock', function () {",
+                            "  const initial = parseInt(pm.environment.get('initialStock') || '0', 10);",
+                            "  pm.expect(inv.available).to.eql(initial);",
+                            "});",
+                            "pm.test('Inventory response has expected fields', function () {",
+                            "  pm.expect(inv).to.have.property('productId');",
+                            "  pm.expect(inv).to.have.property('available');",
+                            "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
             "name": "Cart AddItem (creates cart if missing) - POST /api/cart/{userId}/items",
             "request": {
                 "method": "POST",
@@ -279,6 +406,55 @@
                             "  pm.expect(it).to.have.property('quantity');",
                             "  pm.expect(it).to.have.property('price');",
                             "});"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Poll Inventory Until Reserved - GET /api/inventory/{productId}",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{inventoryBaseUrl}}/api/inventory/{{productId}}",
+                    "host": [
+                        "{{inventoryBaseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "inventory",
+                        "{{productId}}"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Poll inventory status is 200', function () {",
+                            "  pm.response.to.have.status(200);",
+                            "});",
+                            "pm.response.to.be.json;",
+                            "const inv = pm.response.json();",
+                            "const expected = parseInt(pm.environment.get('expectedStockAfter') || '0', 10);",
+                            "const tryNum = parseInt(pm.environment.get('inventoryPollTry') || '0', 10);",
+                            "const max = parseInt(pm.environment.get('inventoryPollMax') || '12', 10);",
+                            "if (inv.available !== expected && tryNum + 1 < max) {",
+                            "  pm.environment.set('inventoryPollTry', String(tryNum + 1));",
+                            "  console.warn(`Inventory not updated yet for ${pm.environment.get('productId')} (attempt ${tryNum + 1}/${max}). Polling again...`);",
+                            "  postman.setNextRequest('Poll Inventory Until Reserved - GET /api/inventory/{productId}');",
+                            "} else {",
+                            "  pm.environment.unset('inventoryPollTry');",
+                            "  pm.test('Inventory availability matches expected', function () {",
+                            "    pm.expect(inv.available).to.eql(expected);",
+                            "  });",
+                            "}",
+                            "if (tryNum + 1 >= max && inv.available !== expected) {",
+                            "  postman.setNextRequest(null);",
+                            "}"
                         ]
                     }
                 }
