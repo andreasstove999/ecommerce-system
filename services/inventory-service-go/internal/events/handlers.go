@@ -9,9 +9,14 @@ import (
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
 )
 
+type StockPublisher interface {
+	PublishStockReserved(ctx context.Context, orderID, userID string, reserved []inventory.Line) error
+	PublishStockDepleted(ctx context.Context, orderID, userID string, depleted []inventory.DepletedLine, reserved []inventory.Line) error
+}
+
 // OrderCreatedHandler reserves stock and publishes either StockReserved or StockDepleted.
 // Returning an error will NACK the message (and it will be sent to the DLQ by the Consumer).
-func OrderCreatedHandler(repo inventory.Repository, pub *Publisher, logger *log.Logger) HandlerFunc {
+func OrderCreatedHandler(repo inventory.Repository, pub StockPublisher, logger *log.Logger) HandlerFunc {
 	return func(ctx context.Context, body []byte) error {
 		var ev OrderCreated
 		if err := json.Unmarshal(body, &ev); err != nil {
