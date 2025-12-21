@@ -17,7 +17,7 @@ import (
 
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/events"
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
-	amqp "github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
