@@ -5,10 +5,18 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var ErrNotFound = errors.New("not found")
+
+// DBPool matches the methods from *pgxpool.Pool that we use.
+// This allows us to mock the database in tests.
+type DBPool interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+}
 
 type Repository interface {
 	Get(ctx context.Context, productID string) (StockItem, error)
@@ -17,10 +25,10 @@ type Repository interface {
 }
 
 type PostgresRepository struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+func NewPostgresRepository(pool DBPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
