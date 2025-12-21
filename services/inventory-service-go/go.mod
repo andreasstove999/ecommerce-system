@@ -9,9 +9,12 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/pashagolub/pgxmock/v4 v4.9.0
 	github.com/rabbitmq/amqp091-go v1.10.0
+	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 )
+
+replace github.com/streadway/amqp => github.com/rabbitmq/amqp091-go v1.10.0
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
