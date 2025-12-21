@@ -37,7 +37,7 @@
     },
     "partitionKey": {
       "type": "string",
-      "description": "Value used for routing, ordering, and idempotency (e.g., orderId)",
+      "description": "Value used for routing and grouping/idempotency (e.g., orderId); not a source of delivery ordering",
       "minLength": 1
     },
     "sequence": {

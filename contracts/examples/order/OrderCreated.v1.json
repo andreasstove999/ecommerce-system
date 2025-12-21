@@ -2,7 +2,7 @@
   "eventName": "OrderCreated",
   "eventVersion": 1,
   "eventId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
-  "correlationId": "6c6f05ae-2d7a-4f5c-9d1a-7f7f2f7a3af1",
+  "correlationId": "c0a8e2b6-3c6a-4d7e-9c8f-1f2e3d4c5b6a",
   "causationId": "6c6f05ae-2d7a-4f5c-9d1a-7f7f2f7a3af1",
   "producer": "order-service",
   "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",

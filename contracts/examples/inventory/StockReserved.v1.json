@@ -2,7 +2,7 @@
   "eventName": "StockReserved",
   "eventVersion": 1,
   "eventId": "11112222-3333-4444-5555-666677778888",
-  "correlationId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
+  "correlationId": "c0a8e2b6-3c6a-4d7e-9c8f-1f2e3d4c5b6a",
   "causationId": "0f1e2d3c-4b5a-6978-8899-aabbccddeeff",
   "producer": "inventory-service",
   "partitionKey": "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00",
