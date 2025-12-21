@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package integration
 
 import (
@@ -361,10 +358,12 @@ func dialAMQP(ctx context.Context, t *testing.T, rabbitURL string) *amqp.Connect
 	defer cancel()
 
 	conn, err := amqp.DialConfig(rabbitURL, amqp.Config{
-		Dial: (&net.Dialer{
-			Timeout:   5 * time.Second,
-			KeepAlive: 5 * time.Second,
-		}).DialContext,
+		Dial: func(network, addr string) (net.Conn, error) {
+			return (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 5 * time.Second,
+			}).DialContext(dialCtx, network, addr)
+		},
 		Heartbeat: 10 * time.Second,
 		Locale:    "en_US",
 	})
