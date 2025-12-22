@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	cartpkg "github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 	httphandler "github.com/andreasstove999/ecommerce-system/cart-service-go/internal/http"
+	"github.com/google/uuid"
 )
 
 // TODO: add RabbitCartEventsPublisher mock
@@ -249,7 +251,7 @@ func TestCheckout(t *testing.T) {
 		repo := &RepositoryMock{GetCartFunc: func(ctx context.Context, userID string) (*cartpkg.Cart, error) {
 			return &cartpkg.Cart{ID: "c1", UserID: userID}, nil
 		}}
-		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error {
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart, _ events.PublishMetadata) error {
 			return errors.New("publish failed")
 		}}
 		handler := httphandler.NewCartHandler(repo, publisher)
@@ -275,7 +277,9 @@ func TestCheckout(t *testing.T) {
 				return errors.New("clear failed")
 			},
 		}
-		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error { return nil }}
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart, _ events.PublishMetadata) error {
+			return nil
+		}}
 		handler := httphandler.NewCartHandler(repo, publisher)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")
@@ -291,6 +295,69 @@ func TestCheckout(t *testing.T) {
 		}
 	})
 
+	t.Run("propagates correlation and causation headers", func(t *testing.T) {
+		cart := &cartpkg.Cart{ID: "c1", UserID: "123"}
+		repo := &RepositoryMock{
+			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return cart, nil },
+			ClearCartFunc: func(ctx context.Context, userID string) error { return nil },
+		}
+		var captured events.PublishMetadata
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart, metadata events.PublishMetadata) error {
+			captured = metadata
+			return nil
+		}}
+		handler := httphandler.NewCartHandler(repo, publisher)
+		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
+		r.Header.Set("X-Correlation-Id", "123e4567-e89b-12d3-a456-426614174000")
+		r.Header.Set("X-Causation-Id", "223e4567-e89b-12d3-a456-426614174000")
+		r.SetPathValue("userId", "123")
+		w := httptest.NewRecorder()
+
+		handler.Checkout(w, r)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		if captured.CorrelationID != "123e4567-e89b-12d3-a456-426614174000" {
+			t.Fatalf("unexpected correlation id %s", captured.CorrelationID)
+		}
+		if captured.CausationID != "223e4567-e89b-12d3-a456-426614174000" {
+			t.Fatalf("unexpected causation id %s", captured.CausationID)
+		}
+	})
+
+	t.Run("generates correlation id when missing", func(t *testing.T) {
+		cart := &cartpkg.Cart{ID: "c1", UserID: "123"}
+		repo := &RepositoryMock{
+			GetCartFunc:   func(ctx context.Context, userID string) (*cartpkg.Cart, error) { return cart, nil },
+			ClearCartFunc: func(ctx context.Context, userID string) error { return nil },
+		}
+		var captured events.PublishMetadata
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart, metadata events.PublishMetadata) error {
+			captured = metadata
+			return nil
+		}}
+		handler := httphandler.NewCartHandler(repo, publisher)
+		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
+		r.SetPathValue("userId", "123")
+		w := httptest.NewRecorder()
+
+		handler.Checkout(w, r)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		if captured.CorrelationID == "" {
+			t.Fatalf("expected correlation id to be generated")
+		}
+		if _, err := uuid.Parse(captured.CorrelationID); err != nil {
+			t.Fatalf("expected correlation id to be a valid uuid, got %v", err)
+		}
+		if captured.CausationID != "" {
+			t.Fatalf("did not expect causation id when header missing, got %s", captured.CausationID)
+		}
+	})
+
 	t.Run("success", func(t *testing.T) {
 		cart := &cartpkg.Cart{ID: "c1", UserID: "123"}
 		cleared := false
@@ -301,7 +368,9 @@ func TestCheckout(t *testing.T) {
 				return nil
 			},
 		}
-		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart) error { return nil }}
+		publisher := &RabbitCartEventsPublisherMock{PublishCartCheckedOutFunc: func(ctx context.Context, c *cartpkg.Cart, _ events.PublishMetadata) error {
+			return nil
+		}}
 		handler := httphandler.NewCartHandler(repo, publisher)
 		r := httptest.NewRequest(http.MethodPost, "/api/cart/123/checkout", nil)
 		r.SetPathValue("userId", "123")

@@ -8,6 +8,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+//TODO: add migrations
+
 func MustOpen() *sql.DB {
 	dsn := os.Getenv("CART_DB_DSN")
 	if dsn == "" {
