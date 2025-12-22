@@ -1,0 +1,17 @@
+{
+  "schema": "cart/cart-checked-out",
+  "data": {
+    "eventType": "CartCheckedOut",
+    "cartId": "cart-123",
+    "userId": "user-42",
+    "items": [
+      {
+        "productId": "sku-100",
+        "quantity": 2,
+        "price": 100
+      }
+    ],
+    "totalAmount": 200,
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$id": "https://ecommerce.example/contracts/order/order-created",
+  "title": "OrderCreated Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "data"],
+  "properties": {
+    "schema": { "const": "order/order-created" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventType",
+        "orderId",
+        "cartId",
+        "userId",
+        "items",
+        "totalAmount",
+        "status",
+        "createdAt"
+      ],
+      "properties": {
+        "eventType": { "const": "OrderCreated" },
+        "orderId": { "type": "string", "minLength": 1 },
+        "cartId": { "type": "string", "minLength": 1 },
+        "userId": { "type": "string", "minLength": 1 },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["productId", "quantity", "price"],
+            "properties": {
+              "productId": { "type": "string", "minLength": 1 },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "price": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "totalAmount": { "type": "number", "minimum": 0 },
+        "status": { "type": "string", "enum": ["CREATED", "PENDING_PAYMENT", "PAID"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
