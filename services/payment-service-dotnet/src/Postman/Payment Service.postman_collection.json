@@ -1,0 +1,99 @@
+{
+  "info": {
+    "_postman_id": "33b3876c-7f2f-4934-a199-2d048e11ea9f",
+    "name": "Payment Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smoke tests for payment-service-dotnet.\n\nSet variables in the environment:\n- baseUrl (default http://localhost:8085)\n- orderId (GUID of an order that has emitted OrderCreated)\n\nTip: Create an order in your system to emit OrderCreated, then query payment status here."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Body has status=ok', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('status');",
+              "  pm.expect(json.status).to.eql('ok');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get payment by orderId",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/payments/by-order/{{orderId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "payments",
+            "by-order",
+            "{{orderId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('orderId is set', function () {",
+              "  const oid = pm.environment.get('orderId');",
+              "  pm.expect(oid, 'Set orderId in environment').to.be.ok;",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Either 200 (payment exists) or 404 (not yet processed/unknown order)",
+              "pm.test('Status is 200 or 404', function () {",
+              "  pm.expect([200, 404]).to.include(pm.response.code);",
+              "});",
+              "",
+              "if (pm.response.code === 200) {",
+              "  pm.test('Response contains payment fields', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('paymentId');",
+              "    pm.expect(json).to.have.property('orderId');",
+              "    pm.expect(json).to.have.property('status');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

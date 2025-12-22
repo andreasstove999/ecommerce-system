@@ -1,0 +1,16 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# IDE
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+
+# VCS
+.git/
+.gitignore
+
+# Docs/tests (not needed for container image)
+README.md
