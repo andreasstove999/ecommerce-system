@@ -10,13 +10,17 @@ import (
 	"time"
 
 	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/db"
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/dedup"
 	eventserver "github.com/andreasstove999/ecommerce-system/order-service-go/internal/events"
 	httpserver "github.com/andreasstove999/ecommerce-system/order-service-go/internal/http"
 	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/order"
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/sequence"
 )
 
 func main() {
 	port := getEnv("PORT", "8082")
+	consumeEnveloped := getEnvBool("CONSUME_ENVELOPED_EVENTS", true)
+	publishEnveloped := getEnvBool("PUBLISH_ENVELOPED_EVENTS", true)
 
 	logger := log.New(os.Stdout, "[order-service] ", log.LstdFlags|log.Lshortfile)
 
@@ -29,6 +33,8 @@ func main() {
 	// DB
 	database := db.MustOpen()
 	orderRepo := order.NewRepository(database)
+	dedupRepo := dedup.NewRepository(database)
+	seqRepo := sequence.NewRepository(database)
 	defer database.Close()
 
 	// RabbitMQ
@@ -40,7 +46,7 @@ func main() {
 	defer cancel()
 
 	// Publisher (needed by some handlers)
-	pub, err := eventserver.NewPublisher(rabbitConn)
+	pub, err := eventserver.NewPublisher(rabbitConn, seqRepo, publishEnveloped)
 	if err != nil {
 		logger.Fatalf("create publisher: %v", err)
 	}
@@ -48,7 +54,7 @@ func main() {
 
 	// Create and configure consumer with all handlers
 	consumer := eventserver.NewConsumer(rabbitConn, logger)
-	consumer.Register(eventserver.QueueCartCheckedOut, eventserver.CartCheckedOutHandler(orderRepo, pub, logger))
+	consumer.Register(eventserver.QueueCartCheckedOut, eventserver.CartCheckedOutHandler(database, orderRepo, dedupRepo, pub, logger, consumeEnveloped))
 	consumer.Register(eventserver.QueuePaymentSucceeded, eventserver.PaymentSucceededHandler(orderRepo, pub, logger))
 	consumer.Register(eventserver.QueuePaymentFailed, eventserver.PaymentFailedHandler(orderRepo, logger))
 	consumer.Register(eventserver.QueueStockReserved, eventserver.StockReservedHandler(orderRepo, pub, logger))
@@ -91,4 +97,15 @@ func getEnv(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func getEnvBool(key string, def bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	if v == "false" || v == "0" || v == "no" {
+		return false
+	}
+	return true
 }

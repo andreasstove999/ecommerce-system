@@ -12,6 +12,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, o *Order) error
+	CreateWithTx(ctx context.Context, tx *sql.Tx, o *Order) error
 	GetByID(ctx context.Context, orderID string) (*Order, error)
 	ListByUser(ctx context.Context, userID string) ([]Order, error)
 	MarkPaymentSucceeded(ctx context.Context, orderID string) (*CompletionState, error)
@@ -61,6 +62,33 @@ func (r *repo) Create(ctx context.Context, o *Order) error {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
+}
+
+func (r *repo) CreateWithTx(ctx context.Context, tx *sql.Tx, o *Order) error {
+	if o.ID == "" {
+		o.ID = uuid.NewString()
+	}
+
+	_, err := tx.ExecContext(ctx,
+		`INSERT INTO orders (id, cart_id, user_id, total_amount, created_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+		o.ID, o.CartID, o.UserID, o.TotalAmount, o.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("insert order: %w", err)
+	}
+
+	for _, it := range o.Items {
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO order_items (id, order_id, product_id, quantity, price)
+             VALUES ($1, $2, $3, $4, $5)`,
+			uuid.NewString(), o.ID, it.ProductID, it.Quantity, it.Price,
+		)
+		if err != nil {
+			return fmt.Errorf("insert order_item: %w", err)
+		}
 	}
 	return nil
 }

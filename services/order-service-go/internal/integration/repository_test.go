@@ -104,6 +104,6 @@ func truncateTables(t *testing.T, db *sql.DB) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, `TRUNCATE order_items, orders`)
+	_, err := db.ExecContext(ctx, `TRUNCATE order_items, orders, event_sequence, event_dedup_checkpoint`)
 	require.NoError(t, err)
 }
