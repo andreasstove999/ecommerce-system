@@ -7,7 +7,7 @@ import (
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
 )
 
-type CartCheckedOut struct {
+type LegacyCartCheckedOut struct {
 	EventType   string          `json:"eventType"`
 	CartID      string          `json:"cartId"`
 	UserID      string          `json:"userId"`
@@ -22,6 +22,11 @@ type CartItemEvent struct {
 	Price     float64 `json:"price"`
 }
 
+type PublishMetadata struct {
+	CorrelationID string
+	CausationID   string
+}
+
 type CartEventsPublisher interface {
-	PublishCartCheckedOut(ctx context.Context, c *cart.Cart) error
+	PublishCartCheckedOut(ctx context.Context, c *cart.Cart, metadata PublishMetadata) error
 }

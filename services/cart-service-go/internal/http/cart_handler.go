@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +17,7 @@ type CartHandler struct {
 }
 
 type CartEventsPublisher interface {
-	PublishCartCheckedOut(ctx context.Context, c *cart.Cart) error
+	PublishCartCheckedOut(ctx context.Context, c *cart.Cart, metadata events.PublishMetadata) error
 }
 
 func NewCartHandler(repo cart.Repository, eventPublisher CartEventsPublisher) *CartHandler {
@@ -146,7 +147,14 @@ func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Publish event (later you add real RabbitMQ)
-	if err := h.eventPublisher.PublishCartCheckedOut(ctx, c); err != nil {
+	metadata := events.PublishMetadata{
+		CorrelationID: r.Header.Get("X-Correlation-Id"),
+		CausationID:   r.Header.Get("X-Causation-Id"),
+	}
+	if metadata.CorrelationID == "" {
+		metadata.CorrelationID = uuid.NewString()
+	}
+	if err := h.eventPublisher.PublishCartCheckedOut(ctx, c, metadata); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to publish cart checked out event")
 		return
 	}
