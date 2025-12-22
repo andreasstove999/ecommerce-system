@@ -16,6 +16,10 @@ public sealed class OrderCreatedConsumer : BackgroundService
     private readonly RabbitMqOptions _opt;
     private readonly IConnection _conn;
     private readonly EventPublisher _publisher;
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public OrderCreatedConsumer(
         IServiceScopeFactory scopeFactory,
@@ -35,9 +39,15 @@ public sealed class OrderCreatedConsumer : BackgroundService
 
         try
         {
-            await channel.ExchangeDeclareAsync(_opt.Exchange, ExchangeType.Topic, durable: true);
+            var usingCustomExchange = !string.IsNullOrWhiteSpace(_opt.Exchange);
+
             await channel.QueueDeclareAsync(_opt.Queue, durable: true, exclusive: false, autoDelete: false);
-            await channel.QueueBindAsync(_opt.Queue, _opt.Exchange, _opt.RoutingKeyOrderCreated);
+
+            if (usingCustomExchange)
+            {
+                await channel.ExchangeDeclareAsync(_opt.Exchange, ExchangeType.Topic, durable: true);
+                await channel.QueueBindAsync(_opt.Queue, _opt.Exchange, _opt.RoutingKeyOrderCreated);
+            }
 
             await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false);
 
@@ -47,7 +57,7 @@ public sealed class OrderCreatedConsumer : BackgroundService
                 try
                 {
                     var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-                    var envelope = JsonSerializer.Deserialize<Envelope<OrderCreated>>(json);
+                    var envelope = JsonSerializer.Deserialize<Envelope<OrderCreated>>(json, _jsonOptions);
 
                     if (envelope is null)
                     {
@@ -60,8 +70,7 @@ public sealed class OrderCreatedConsumer : BackgroundService
                 }
                 catch
                 {
-                    // Requeue=false to avoid poison-message infinite loops
-                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
+                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true);
                 }
             };
 
