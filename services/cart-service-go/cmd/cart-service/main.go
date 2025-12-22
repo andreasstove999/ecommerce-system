@@ -23,7 +23,8 @@ func main() {
 	rabbitConn := events.MustDialRabbit()
 	defer rabbitConn.Close()
 
-	cartPublisher, err := events.NewRabbitCartEventsPublisher(rabbitConn)
+	sequenceRepo := events.NewSequenceRepository(database)
+	cartPublisher, err := events.NewRabbitCartEventsPublisher(rabbitConn, sequenceRepo)
 	if err != nil {
 		log.Fatalf("failed to create cart publisher: %v", err)
 	}

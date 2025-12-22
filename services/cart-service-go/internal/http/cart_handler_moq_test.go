@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
+	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/events"
 )
 
 // RepositoryMock is a mock implementation of cart.Repository.
@@ -80,7 +81,7 @@ type RepositoryMock struct {
 //	}
 type RabbitCartEventsPublisherMock struct {
 	// PublishCartCheckedOutFunc mocks the PublishCartCheckedOut method.
-	PublishCartCheckedOutFunc func(ctx context.Context, c *cart.Cart) error
+	PublishCartCheckedOutFunc func(ctx context.Context, c *cart.Cart, metadata events.PublishMetadata) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -90,24 +91,27 @@ type RabbitCartEventsPublisherMock struct {
 			Ctx context.Context
 			// C is the c argument value.
 			C *cart.Cart
+			// Metadata is the metadata argument value.
+			Metadata events.PublishMetadata
 		}
 	}
 	lockRabbitCartEventsPublisherMockPublishCartCheckedOut sync.RWMutex
 }
 
 // PublishCartCheckedOut calls PublishCartCheckedOutFunc.
-func (mock *RabbitCartEventsPublisherMock) PublishCartCheckedOut(ctx context.Context, c *cart.Cart) error {
+func (mock *RabbitCartEventsPublisherMock) PublishCartCheckedOut(ctx context.Context, c *cart.Cart, metadata events.PublishMetadata) error {
 	if mock.PublishCartCheckedOutFunc == nil {
 		panic("RabbitCartEventsPublisherMock.PublishCartCheckedOutFunc: method is nil but RabbitCartEventsPublisher.PublishCartCheckedOut was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		C   *cart.Cart
-	}{Ctx: ctx, C: c}
+		Ctx      context.Context
+		C        *cart.Cart
+		Metadata events.PublishMetadata
+	}{Ctx: ctx, C: c, Metadata: metadata}
 	mock.lockRabbitCartEventsPublisherMockPublishCartCheckedOut.Lock()
 	mock.calls.PublishCartCheckedOut = append(mock.calls.PublishCartCheckedOut, callInfo)
 	mock.lockRabbitCartEventsPublisherMockPublishCartCheckedOut.Unlock()
-	return mock.PublishCartCheckedOutFunc(ctx, c)
+	return mock.PublishCartCheckedOutFunc(ctx, c, metadata)
 }
 
 // PublishCartCheckedOutCalls gets all the calls that were made to PublishCartCheckedOut.
@@ -115,12 +119,14 @@ func (mock *RabbitCartEventsPublisherMock) PublishCartCheckedOut(ctx context.Con
 //
 //	len(mockedRabbitCartEventsPublisher.PublishCartCheckedOutCalls())
 func (mock *RabbitCartEventsPublisherMock) PublishCartCheckedOutCalls() []struct {
-	Ctx context.Context
-	C   *cart.Cart
+	Ctx      context.Context
+	C        *cart.Cart
+	Metadata events.PublishMetadata
 } {
 	var calls []struct {
-		Ctx context.Context
-		C   *cart.Cart
+		Ctx      context.Context
+		C        *cart.Cart
+		Metadata events.PublishMetadata
 	}
 	mock.lockRabbitCartEventsPublisherMockPublishCartCheckedOut.RLock()
 	calls = mock.calls.PublishCartCheckedOut

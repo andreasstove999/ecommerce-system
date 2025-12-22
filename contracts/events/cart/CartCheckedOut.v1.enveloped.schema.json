@@ -24,7 +24,7 @@
         },
         "schema": {
           "type": "string",
-          "const": "contracts/events/cart/CartCheckedOut.v1.payload.schema.json"
+          "const": "contracts/events/cart/CartCheckedOut.v1.enveloped.schema.json"
         },
         "payload": {
           "$ref": "./CartCheckedOut.v1.payload.schema.json"
