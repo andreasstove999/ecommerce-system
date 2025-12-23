@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +11,9 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/dedup"
 	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/order"
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/sequence"
 )
 
 // MustDialRabbit connects to RabbitMQ or panics on failure.
@@ -201,14 +204,24 @@ func (c *Consumer) publishToDLQ(ctx context.Context, originalQueue string, body 
 // StartCartCheckedOutConsumer starts a consumer that listens for CartCheckedOut
 // events and persists orders using the provided repository.
 // It returns the consumer, a cleanup function for the publisher, and any error encountered.
-func StartCartCheckedOutConsumer(ctx context.Context, conn *amqp.Connection, repo order.Repository, logger *log.Logger) (*Consumer, func(), error) {
-	pub, err := NewPublisher(conn)
+func StartCartCheckedOutConsumer(
+	ctx context.Context,
+	conn *amqp.Connection,
+	db *sql.DB,
+	repo order.Repository,
+	dedupRepo dedup.Repository,
+	seqRepo sequence.Repository,
+	logger *log.Logger,
+	consumeEnveloped bool,
+	publishEnveloped bool,
+) (*Consumer, func(), error) {
+	pub, err := NewPublisher(conn, seqRepo, publishEnveloped)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create publisher: %w", err)
 	}
 
 	consumer := NewConsumer(conn, logger)
-	consumer.Register(QueueCartCheckedOut, CartCheckedOutHandler(repo, pub, logger))
+	consumer.Register(QueueCartCheckedOut, CartCheckedOutHandler(db, repo, dedupRepo, pub, logger, consumeEnveloped))
 
 	if err := consumer.Start(ctx); err != nil {
 		_ = pub.Close()

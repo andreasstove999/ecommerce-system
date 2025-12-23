@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -29,6 +30,10 @@ func (f *fakeRepo) Create(ctx context.Context, o *order.Order) error {
 		return f.createFunc(ctx, o)
 	}
 	return nil
+}
+
+func (f *fakeRepo) CreateWithTx(ctx context.Context, tx *sql.Tx, o *order.Order) error {
+	return f.Create(ctx, o)
 }
 
 func (f *fakeRepo) GetByID(ctx context.Context, orderID string) (*order.Order, error) {

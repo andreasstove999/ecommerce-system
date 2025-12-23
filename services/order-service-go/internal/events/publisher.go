@@ -9,6 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/order"
+	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/sequence"
 )
 
 // TODO compare with cart-service-go/internal/events/rabbit.go there seems to be a lot of code duplication and some mismatches
@@ -19,10 +20,12 @@ const (
 )
 
 type Publisher struct {
-	ch *amqp.Channel
+	ch               *amqp.Channel
+	seqRepo          sequence.Repository
+	publishEnveloped bool
 }
 
-func NewPublisher(conn *amqp.Connection) (*Publisher, error) {
+func NewPublisher(conn *amqp.Connection, seqRepo sequence.Repository, publishEnveloped bool) (*Publisher, error) {
 	ch, err := conn.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("open channel: %w", err)
@@ -38,51 +41,84 @@ func NewPublisher(conn *amqp.Connection) (*Publisher, error) {
 		return nil, fmt.Errorf("declare %s: %w", OrderCompletedQueue, err)
 	}
 
-	return &Publisher{ch: ch}, nil
+	return &Publisher{
+		ch:               ch,
+		seqRepo:          seqRepo,
+		publishEnveloped: publishEnveloped,
+	}, nil
 }
 
 func (p *Publisher) Close() error {
 	return p.ch.Close()
 }
 
-func (p *Publisher) PublishOrderCreated(ctx context.Context, o *order.Order) error {
-	ev := OrderCreated{
-		EventType:   "OrderCreated",
-		OrderID:     o.ID,
-		CartID:      o.CartID,
-		UserID:      o.UserID,
-		TotalAmount: o.TotalAmount,
-		Timestamp:   time.Now().UTC(),
+func (p *Publisher) PublishOrderCreated(ctx context.Context, o *order.Order, meta EnvelopeMetadata) error {
+	if !p.publishEnveloped {
+		ev := OrderCreated{
+			EventType:   "OrderCreated",
+			OrderID:     o.ID,
+			CartID:      o.CartID,
+			UserID:      o.UserID,
+			TotalAmount: o.TotalAmount,
+			Timestamp:   time.Now().UTC(),
+		}
+
+		// Reuse CartItem contract so events are consistent across services
+		for _, it := range o.Items {
+			ev.Items = append(ev.Items, CartItem{
+				ProductID: it.ProductID,
+				Quantity:  it.Quantity,
+				Price:     it.Price,
+			})
+		}
+
+		body, err := json.Marshal(ev)
+		if err != nil {
+			return fmt.Errorf("marshal OrderCreated legacy: %w", err)
+		}
+		return p.publishJSON(ctx, OrderCreatedQueue, body)
 	}
 
-	// Reuse CartItem contract so events are consistent across services
-	for _, it := range o.Items {
-		ev.Items = append(ev.Items, CartItem{
-			ProductID: it.ProductID,
-			Quantity:  it.Quantity,
-			Price:     it.Price,
-		})
-	}
-
-	body, err := json.Marshal(ev)
+	seq, err := p.seqRepo.NextSequence(ctx, o.ID)
 	if err != nil {
-		return fmt.Errorf("marshal OrderCreated: %w", err)
+		return fmt.Errorf("next sequence: %w", err)
+	}
+
+	env := BuildOrderCreatedEnvelope(o, seq, meta)
+	body, err := json.Marshal(env)
+	if err != nil {
+		return fmt.Errorf("marshal OrderCreated enveloped: %w", err)
 	}
 
 	return p.publishJSON(ctx, OrderCreatedQueue, body)
 }
 
-func (p *Publisher) PublishOrderCompleted(ctx context.Context, orderID, userID string) error {
-	ev := OrderCompleted{
-		EventType: "OrderCompleted",
-		OrderID:   orderID,
-		UserID:    userID,
-		Timestamp: time.Now().UTC(),
+func (p *Publisher) PublishOrderCompleted(ctx context.Context, orderID, userID string, meta EnvelopeMetadata) error {
+	if !p.publishEnveloped {
+		ev := OrderCompleted{
+			EventType: "OrderCompleted",
+			OrderID:   orderID,
+			UserID:    userID,
+			Timestamp: time.Now().UTC(),
+		}
+
+		body, err := json.Marshal(ev)
+		if err != nil {
+			return fmt.Errorf("marshal OrderCompleted legacy: %w", err)
+		}
+
+		return p.publishJSON(ctx, OrderCompletedQueue, body)
 	}
 
-	body, err := json.Marshal(ev)
+	seq, err := p.seqRepo.NextSequence(ctx, orderID)
 	if err != nil {
-		return fmt.Errorf("marshal OrderCompleted: %w", err)
+		return fmt.Errorf("next sequence: %w", err)
+	}
+
+	env := BuildOrderCompletedEnvelope(orderID, userID, seq, meta)
+	body, err := json.Marshal(env)
+	if err != nil {
+		return fmt.Errorf("marshal OrderCompleted enveloped: %w", err)
 	}
 
 	return p.publishJSON(ctx, OrderCompletedQueue, body)
