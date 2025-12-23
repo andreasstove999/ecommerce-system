@@ -24,6 +24,12 @@ type Repository interface {
 	Reserve(ctx context.Context, orderID string, lines []Line) (ReserveResult, error)
 }
 
+type TransactionalRepository interface {
+	Repository
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+	ReserveWithTx(ctx context.Context, tx pgx.Tx, orderID string, lines []Line) (ReserveResult, error)
+}
+
 type PostgresRepository struct {
 	pool DBPool
 }
@@ -70,6 +76,32 @@ func (r *PostgresRepository) Reserve(ctx context.Context, orderID string, lines 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	res, err = r.reserveWithTx(ctx, tx, orderID, lines)
+	if err != nil {
+		return res, err
+	}
+
+	if len(res.Depleted) > 0 {
+		return res, nil
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+func (r *PostgresRepository) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
+	return r.pool.BeginTx(ctx, txOptions)
+}
+
+func (r *PostgresRepository) ReserveWithTx(ctx context.Context, tx pgx.Tx, orderID string, lines []Line) (ReserveResult, error) {
+	return r.reserveWithTx(ctx, tx, orderID, lines)
+}
+
+func (r *PostgresRepository) reserveWithTx(ctx context.Context, tx pgx.Tx, orderID string, lines []Line) (ReserveResult, error) {
+	res := ReserveResult{}
+
 	type locked struct {
 		productID string
 		requested int
@@ -104,7 +136,6 @@ func (r *PostgresRepository) Reserve(ctx context.Context, orderID string, lines 
 	}
 
 	if len(res.Depleted) > 0 {
-		// no changes applied
 		return res, nil
 	}
 
@@ -120,8 +151,5 @@ func (r *PostgresRepository) Reserve(ctx context.Context, orderID string, lines 
 		res.Reserved = append(res.Reserved, Line{ProductID: row.productID, Quantity: row.requested})
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return res, err
-	}
 	return res, nil
 }

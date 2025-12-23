@@ -42,7 +42,7 @@ func main() {
 	conn := events.MustDialRabbit()
 	defer conn.Close()
 
-	consumer, cleanupPub, err := events.StartOrderCreatedConsumer(ctx, conn, repo, logger)
+	consumer, cleanupPub, err := events.StartOrderCreatedConsumer(ctx, conn, pool, repo, logger)
 	if err != nil {
 		logger.Fatalf("start consumer: %v", err)
 	}
