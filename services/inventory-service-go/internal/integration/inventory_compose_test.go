@@ -43,44 +43,32 @@ func TestInventoryComposeFlow(t *testing.T) {
 	composeSeedStock(ctx, t, client, productA, 5)
 	composeSeedStock(ctx, t, client, productB, 1)
 
-	orderID1 := fmt.Sprintf("order-%d", time.Now().UnixNano())
-	publishOrderCreatedMessage(ctx, t, ch, events.OrderCreated{
-		EventType: events.EventTypeOrderCreated,
-		OrderID:   orderID1,
-		UserID:    "user-1",
-		Timestamp: time.Now().UTC(),
-		Items: []events.CartItem{
-			{ProductID: productA, Quantity: 2},
-		},
-	})
+	orderID1 := uuid.NewString()
+	publishOrderCreatedMessage(ctx, t, ch, newComposeOrder(orderID1, "user-1", []events.OrderLineItem{
+		{ProductID: productA, Quantity: 2},
+	}, 1))
 
-	reserved := waitForQueueMessage[events.StockReserved](ctx, t, ch, events.StockReservedQueue)
-	require.Equal(t, orderID1, reserved.OrderID)
-	require.Len(t, reserved.Items, 1)
-	require.Equal(t, productA, reserved.Items[0].ProductID)
-	require.Equal(t, 2, reserved.Items[0].Quantity)
+	reserved := waitForQueueMessage[events.StockReservedEvent](ctx, t, ch, events.StockReservedQueue)
+	require.Equal(t, orderID1, reserved.Payload.OrderID)
+	require.Len(t, reserved.Payload.Items, 1)
+	require.Equal(t, productA, reserved.Payload.Items[0].ProductID)
+	require.Equal(t, 2, reserved.Payload.Items[0].Quantity)
 
 	waitForStockAvailability(ctx, t, client, productA, 3)
 	waitForStockAvailability(ctx, t, client, productB, 1)
 
 	orderID2 := uuid.NewString()
-	publishOrderCreatedMessage(ctx, t, ch, events.OrderCreated{
-		EventType: events.EventTypeOrderCreated,
-		OrderID:   orderID2,
-		UserID:    "user-2",
-		Timestamp: time.Now().UTC(),
-		Items: []events.CartItem{
-			{ProductID: productA, Quantity: 2},
-			{ProductID: productB, Quantity: 2},
-		},
-	})
+	publishOrderCreatedMessage(ctx, t, ch, newComposeOrder(orderID2, "user-2", []events.OrderLineItem{
+		{ProductID: productA, Quantity: 2},
+		{ProductID: productB, Quantity: 2},
+	}, 2))
 
-	depleted := waitForQueueMessage[events.StockDepleted](ctx, t, ch, events.StockDepletedQueue)
-	require.Equal(t, orderID2, depleted.OrderID)
-	require.Len(t, depleted.Depleted, 1)
-	require.Equal(t, productB, depleted.Depleted[0].ProductID)
-	require.Equal(t, 2, depleted.Depleted[0].Requested)
-	require.Equal(t, 1, depleted.Depleted[0].Available)
+	depleted := waitForQueueMessage[events.StockDepletedEvent](ctx, t, ch, events.StockDepletedQueue)
+	require.Equal(t, orderID2, depleted.Payload.OrderID)
+	require.Len(t, depleted.Payload.Depleted, 1)
+	require.Equal(t, productB, depleted.Payload.Depleted[0].ProductID)
+	require.Equal(t, 2, depleted.Payload.Depleted[0].Requested)
+	require.Equal(t, 1, depleted.Payload.Depleted[0].Available)
 
 	waitForStockAvailability(ctx, t, client, productA, 3)
 	waitForStockAvailability(ctx, t, client, productB, 1)
@@ -106,7 +94,7 @@ func composeSeedStock(ctx context.Context, t *testing.T, client *http.Client, pr
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-func publishOrderCreatedMessage(ctx context.Context, t *testing.T, ch *amqp.Channel, order events.OrderCreated) {
+func publishOrderCreatedMessage(ctx context.Context, t *testing.T, ch *amqp.Channel, order events.EnvelopedOrderCreated) {
 	t.Helper()
 
 	_, err := ch.QueueDeclare(events.QueueOrderCreated, true, false, false, false, nil)
@@ -198,6 +186,29 @@ func waitForStockAvailability(ctx context.Context, t *testing.T, client *http.Cl
 				backoff = time.Second
 			}
 		}
+	}
+}
+
+func newComposeOrder(orderID, userID string, items []events.OrderLineItem, seq int64) events.EnvelopedOrderCreated {
+	now := time.Now().UTC()
+	return events.EnvelopedOrderCreated{
+		EventEnvelope: events.EventEnvelope{
+			EventName:     events.EventTypeOrderCreated,
+			EventVersion:  1,
+			EventID:       uuid.NewString(),
+			CorrelationID: uuid.NewString(),
+			Producer:      "order-service",
+			PartitionKey:  orderID,
+			Sequence:      seq,
+			OccurredAt:    now,
+			Schema:        "contracts/events/order/OrderCreated.v1.payload.schema.json",
+		},
+		Payload: events.OrderCreatedPayload{
+			OrderID:   orderID,
+			UserID:    userID,
+			Items:     items,
+			Timestamp: now,
+		},
 	}
 }
 
