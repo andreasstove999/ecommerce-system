@@ -145,14 +145,14 @@ sequenceDiagram
 #### Envelope + payload composition
 ```mermaid
 flowchart LR
-    E[EventEnvelope] -->|payload| P[Domain Payload]
-    E --> N[eventName]
-    E --> V[eventVersion]
-    E --> ID[eventId]
-    E --> CO[correlationId/causationId]
-    E --> PK[partitionKey]
-    E --> SEQ[sequence (telemetry)]
-    E --> OA[occurredAt]
+    E["EventEnvelope"] -->|payload| P["Domain Payload"]
+    E --> N["eventName"]
+    E --> V["eventVersion"]
+    E --> ID["eventId"]
+    E --> CO["correlationId/causationId"]
+    E --> PK["partitionKey"]
+    E --> SEQ["sequence (telemetry)"]
+    E --> OA["occurredAt"]
 ```
 
 #### Ordering-independent dedup/idempotency
