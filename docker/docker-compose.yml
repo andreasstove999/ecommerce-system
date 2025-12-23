@@ -115,5 +115,36 @@ services:
     ports:
       - "8085:8080"
 
+  catalog-service-java:
+    build:
+      context: ../services/catalog-service-java
+      dockerfile: Dockerfile
+    container_name: catalog-service-java
+    environment:
+      - PORT=8086
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://catalog-db:5432/catalog_db
+      - SPRING_DATASOURCE_USERNAME=catalog_user
+      - SPRING_DATASOURCE_PASSWORD=catalog_pass
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - catalog-db
+      - rabbitmq
+    ports:
+      - "8086:8086"
+
+  catalog-db:
+    image: postgres:16
+    container_name: catalog-db
+    environment:
+      - POSTGRES_DB=catalog_db
+      - POSTGRES_USER=catalog_user
+      - POSTGRES_PASSWORD=catalog_pass
+    ports:
+      - "5437:5432"
+    volumes:
+      - catalog_db_data:/var/lib/postgresql/data
+
+
 volumes:
   payment_db_data:
+  catalog_db_data:
