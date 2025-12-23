@@ -89,3 +89,31 @@ services:
       - "5435:5432"
     volumes:
       - ../services/inventory-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  payment-db:
+    image: postgres:16
+    container_name: payment-db
+    environment:
+      - POSTGRES_DB=payment_db
+      - POSTGRES_USER=payment_user
+      - POSTGRES_PASSWORD=payment_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+
+  payment-service-dotnet:
+    build:
+      context: ../services/payment-service-dotnet
+      dockerfile: Dockerfile
+    container_name: payment-service-dotnet
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - rabbitmq
+      - payment-db
+    ports:
+      - "8085:8080"
+
+volumes:
+  payment_db_data:
