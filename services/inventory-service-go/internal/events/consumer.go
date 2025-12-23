@@ -10,7 +10,9 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/dedup"
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
+	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/sequence"
 )
 
 // MustDialRabbit connects to RabbitMQ or panics on failure.
@@ -201,14 +203,21 @@ func (c *Consumer) publishToDLQ(ctx context.Context, originalQueue string, body 
 // StartOrderCreatedConsumer starts a consumer that listens for OrderCreated
 // events and reserves stock using the provided repository.
 // It returns the consumer, a cleanup function for the publisher, and any error encountered.
-func StartOrderCreatedConsumer(ctx context.Context, conn *amqp.Connection, repo inventory.Repository, logger *log.Logger) (*Consumer, func(), error) {
-	pub, err := NewPublisher(conn)
+func StartOrderCreatedConsumer(ctx context.Context, conn *amqp.Connection, pool inventory.DBPool, repo inventory.TransactionalRepository, logger *log.Logger) (*Consumer, func(), error) {
+	seqRepo := sequence.NewRepository(pool)
+	pub, err := NewPublisher(conn, seqRepo, PublisherOptions{
+		PublishEnveloped: publishEnvelopedEnabled(),
+		Producer:         "inventory-service",
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("create publisher: %w", err)
 	}
 
+	dedupRepo := dedup.NewRepository(pool)
+	consumeEnveloped := consumeEnvelopedEnabled()
+
 	consumer := NewConsumer(conn, logger)
-	consumer.Register(QueueOrderCreated, OrderCreatedHandler(repo, pub, logger))
+	consumer.Register(QueueOrderCreated, OrderCreatedHandler(repo, dedupRepo, pub, logger, orderCreatedConsumerName, consumeEnveloped))
 
 	if err := consumer.Start(ctx); err != nil {
 		_ = pub.Close()

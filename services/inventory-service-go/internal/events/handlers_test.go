@@ -3,296 +3,391 @@ package events
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
 	"log"
-	"reflect"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/dedup"
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
 )
 
-type fakeInventory struct {
-	orderID string
-	lines   []inventory.Line
-	result  inventory.ReserveResult
-	err     error
-	called  bool
-}
-
-func (f *fakeInventory) Get(ctx context.Context, productID string) (inventory.StockItem, error) {
-	return inventory.StockItem{}, errors.New("not implemented")
-}
-
-func (f *fakeInventory) SetAvailable(ctx context.Context, productID string, available int) error {
-	return errors.New("not implemented")
-}
-
-func (f *fakeInventory) Reserve(ctx context.Context, orderID string, lines []inventory.Line) (inventory.ReserveResult, error) {
-	f.called = true
-	f.orderID = orderID
-	f.lines = append([]inventory.Line(nil), lines...)
-	if f.err != nil {
-		return inventory.ReserveResult{}, f.err
-	}
-	return f.result, nil
-}
-
-type fakePublisher struct {
-	reservedQueue  string
-	reservedBody   []byte
-	reservedCalled bool
-	reservedErr    error
-
-	depletedQueue  string
-	depletedBody   []byte
-	depletedCalled bool
-	depletedErr    error
-}
-
-func (f *fakePublisher) PublishStockReserved(ctx context.Context, orderID, userID string, reserved []inventory.Line) error {
-	f.reservedCalled = true
-	f.reservedQueue = StockReservedQueue
-	if f.reservedErr != nil {
-		return f.reservedErr
-	}
-
-	ev := StockReserved{
-		EventType: EventTypeStockReserved,
-		OrderID:   orderID,
-		UserID:    userID,
-		Timestamp: time.Unix(0, 0).UTC(),
-	}
-	for _, it := range reserved {
-		ev.Items = append(ev.Items, StockLine{ProductID: it.ProductID, Quantity: it.Quantity})
-	}
-
-	body, err := json.Marshal(ev)
+func TestParseOrderCreatedEnvelopeExample(t *testing.T) {
+	body, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "contracts", "examples", "order", "OrderCreated.v1.json"))
 	if err != nil {
-		return err
+		t.Fatalf("read example: %v", err)
 	}
-	f.reservedBody = body
+
+	msg, err := parseOrderCreated(body, true)
+	if err != nil {
+		t.Fatalf("parse example: %v", err)
+	}
+
+	if msg.Envelope == nil {
+		t.Fatalf("expected envelope")
+	}
+	if msg.Envelope.EventName != EventTypeOrderCreated || msg.Envelope.EventVersion != 1 {
+		t.Fatalf("unexpected envelope metadata %+v", msg.Envelope)
+	}
+	if msg.Payload.OrderID != "f1e2d3c4-b5a6-7988-99aa-bbccddeeff00" {
+		t.Fatalf("unexpected order id %s", msg.Payload.OrderID)
+	}
+	if len(msg.Payload.Items) != 2 {
+		t.Fatalf("unexpected items len %d", len(msg.Payload.Items))
+	}
+}
+
+func TestOrderCreatedHandlerDedupAndGap(t *testing.T) {
+	store := newFakeStore(map[string]int{
+		"p1": 5,
+	})
+	repo := &fakeTransactionalRepo{store: store}
+	pub := &capturingPublisher{}
+	dedupRepo := dedup.NewRepository(nil)
+
+	handler := OrderCreatedHandler(repo, dedupRepo, pub, log.New(os.Stdout, "", 0), orderCreatedConsumerName, true)
+
+	msg := makeOrderCreatedMessage("order-1", "user-1", "p1", 2, 1)
+	body, _ := json.Marshal(msg)
+
+	if err := handler(context.Background(), body); err != nil {
+		t.Fatalf("first handle: %v", err)
+	}
+	if pub.reservedCalls != 1 {
+		t.Fatalf("reserved calls=%d want=1", pub.reservedCalls)
+	}
+	if store.available["p1"] != 3 {
+		t.Fatalf("available after first=%d want=3", store.available["p1"])
+	}
+
+	// duplicate sequence should be ignored
+	if err := handler(context.Background(), body); err != nil {
+		t.Fatalf("second duplicate handle: %v", err)
+	}
+	if pub.reservedCalls != 1 {
+		t.Fatalf("reserved calls after duplicate=%d want=1", pub.reservedCalls)
+	}
+	if store.available["p1"] != 3 {
+		t.Fatalf("available after duplicate=%d want=3", store.available["p1"])
+	}
+
+	// higher sequence with gap should process
+	msgGap := makeOrderCreatedMessage("order-1", "user-1", "p1", 1, 3)
+	bodyGap, _ := json.Marshal(msgGap)
+	if err := handler(context.Background(), bodyGap); err != nil {
+		t.Fatalf("gap handle: %v", err)
+	}
+	if pub.reservedCalls != 2 {
+		t.Fatalf("reserved calls after gap=%d want=2", pub.reservedCalls)
+	}
+	if store.available["p1"] != 2 {
+		t.Fatalf("available after gap=%d want=2", store.available["p1"])
+	}
+
+	lastSeq := store.checkpoints[orderCreatedConsumerName]["order-1"]
+	if lastSeq != 3 {
+		t.Fatalf("checkpoint=%d want=3", lastSeq)
+	}
+}
+
+func TestOrderCreatedHandlerPropagatesCorrelation(t *testing.T) {
+	store := newFakeStore(map[string]int{
+		"p1": 2,
+	})
+	repo := &fakeTransactionalRepo{store: store}
+	pub := &capturingPublisher{}
+	dedupRepo := dedup.NewRepository(nil)
+
+	handler := OrderCreatedHandler(repo, dedupRepo, pub, log.New(os.Stdout, "", 0), orderCreatedConsumerName, true)
+
+	correlation := uuid.NewString()
+	eventID := uuid.NewString()
+	msg := EnvelopedOrderCreated{
+		EventEnvelope: EventEnvelope{
+			EventName:     EventTypeOrderCreated,
+			EventVersion:  1,
+			EventID:       eventID,
+			CorrelationID: correlation,
+			Producer:      "order-service",
+			PartitionKey:  "order-2",
+			Sequence:      10,
+			OccurredAt:    time.Now().UTC(),
+			Schema:        "contracts/events/order/OrderCreated.v1.payload.schema.json",
+		},
+		Payload: OrderCreatedPayload{
+			OrderID:   "order-2",
+			UserID:    "user-2",
+			Items:     []OrderLineItem{{ProductID: "p1", Quantity: 1}},
+			Timestamp: time.Now().UTC(),
+		},
+	}
+	body, _ := json.Marshal(msg)
+
+	if err := handler(context.Background(), body); err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+
+	if pub.lastMeta.CorrelationID != correlation {
+		t.Fatalf("correlation=%s want=%s", pub.lastMeta.CorrelationID, correlation)
+	}
+	if pub.lastMeta.CausationID != eventID {
+		t.Fatalf("causation=%s want=%s", pub.lastMeta.CausationID, eventID)
+	}
+	if pub.lastMeta.PartitionKey != msg.Payload.OrderID {
+		t.Fatalf("partitionKey=%s want=%s", pub.lastMeta.PartitionKey, msg.Payload.OrderID)
+	}
+}
+
+func makeOrderCreatedMessage(orderID, userID, productID string, quantity int, seq int64) EnvelopedOrderCreated {
+	return EnvelopedOrderCreated{
+		EventEnvelope: EventEnvelope{
+			EventName:     EventTypeOrderCreated,
+			EventVersion:  1,
+			EventID:       uuid.NewString(),
+			CorrelationID: uuid.NewString(),
+			Producer:      "order-service",
+			PartitionKey:  orderID,
+			Sequence:      seq,
+			OccurredAt:    time.Now().UTC(),
+			Schema:        "contracts/events/order/OrderCreated.v1.payload.schema.json",
+		},
+		Payload: OrderCreatedPayload{
+			OrderID:   orderID,
+			UserID:    userID,
+			Items:     []OrderLineItem{{ProductID: productID, Quantity: quantity}},
+			Timestamp: time.Now().UTC(),
+		},
+	}
+}
+
+type capturingPublisher struct {
+	reservedCalls int
+	depletedCalls int
+	lastMeta      EventMeta
+	lastOrderID   string
+	lastUserID    string
+	lastReserved  []inventory.Line
+	lastDepleted  []inventory.DepletedLine
+}
+
+func (f *capturingPublisher) PublishStockReserved(ctx context.Context, meta EventMeta, orderID, userID string, reserved []inventory.Line) error {
+	f.reservedCalls++
+	f.lastMeta = meta
+	f.lastOrderID = orderID
+	f.lastUserID = userID
+	f.lastReserved = append([]inventory.Line(nil), reserved...)
 	return nil
 }
 
-func (f *fakePublisher) PublishStockDepleted(ctx context.Context, orderID, userID string, depleted []inventory.DepletedLine, reserved []inventory.Line) error {
-	f.depletedCalled = true
-	f.depletedQueue = StockDepletedQueue
-	if f.depletedErr != nil {
-		return f.depletedErr
-	}
-
-	ev := StockDepleted{
-		EventType: EventTypeStockDepleted,
-		OrderID:   orderID,
-		UserID:    userID,
-		Timestamp: time.Unix(0, 0).UTC(),
-	}
-	for _, d := range depleted {
-		ev.Depleted = append(ev.Depleted, DepletedLine{
-			ProductID: d.ProductID,
-			Requested: d.Requested,
-			Available: d.Available,
-		})
-	}
-	for _, r := range reserved {
-		ev.Reserved = append(ev.Reserved, StockLine{
-			ProductID: r.ProductID,
-			Quantity:  r.Quantity,
-		})
-	}
-
-	body, err := json.Marshal(ev)
-	if err != nil {
-		return err
-	}
-	f.depletedBody = body
+func (f *capturingPublisher) PublishStockDepleted(ctx context.Context, meta EventMeta, orderID, userID string, depleted []inventory.DepletedLine, reserved []inventory.Line) error {
+	f.depletedCalls++
+	f.lastMeta = meta
+	f.lastOrderID = orderID
+	f.lastUserID = userID
+	f.lastDepleted = append([]inventory.DepletedLine(nil), depleted...)
+	f.lastReserved = append([]inventory.Line(nil), reserved...)
 	return nil
 }
 
-func TestOrderCreatedHandler(t *testing.T) {
-	t.Parallel()
+// --- fakes for transactional repo + tx ---
 
-	validEvent := OrderCreated{
-		EventType: EventTypeOrderCreated,
-		OrderID:   "order-123",
-		UserID:    "user-42",
-		Items: []CartItem{
-			{ProductID: "p1", Quantity: 2},
-			{ProductID: "p2", Quantity: 1},
-			{ProductID: "", Quantity: 4},   // ignored
-			{ProductID: "p3", Quantity: 0}, // ignored
-		},
-		Timestamp: time.Unix(0, 0).UTC(),
+type fakeStore struct {
+	available   map[string]int
+	checkpoints map[string]map[string]int64
+}
+
+func newFakeStore(avail map[string]int) *fakeStore {
+	cp := make(map[string]int, len(avail))
+	for k, v := range avail {
+		cp[k] = v
 	}
-
-	type tc struct {
-		name       string
-		body       []byte
-		repo       *fakeInventory
-		pub        *fakePublisher
-		wantErr    bool
-		wantRepo   bool
-		assertFunc func(t *testing.T, repo *fakeInventory, pub *fakePublisher)
-	}
-
-	tests := []tc{
-		{
-			name: "reserves stock and publishes stock reserved",
-			body: mustMarshal(validEvent, t),
-			repo: &fakeInventory{
-				result: inventory.ReserveResult{
-					Reserved: []inventory.Line{{ProductID: "p1", Quantity: 2}, {ProductID: "p2", Quantity: 1}},
-				},
-			},
-			pub:      &fakePublisher{},
-			wantRepo: true,
-			assertFunc: func(t *testing.T, repo *fakeInventory, pub *fakePublisher) {
-				t.Helper()
-				if !reflect.DeepEqual(repo.lines, []inventory.Line{{ProductID: "p1", Quantity: 2}, {ProductID: "p2", Quantity: 1}}) {
-					t.Fatalf("Reserve called with %+v, want p1 and p2", repo.lines)
-				}
-				if !pub.reservedCalled {
-					t.Fatalf("PublishStockReserved not called")
-				}
-				if pub.reservedQueue != StockReservedQueue {
-					t.Fatalf("reserved queue=%s want=%s", pub.reservedQueue, StockReservedQueue)
-				}
-
-				var ev StockReserved
-				if err := json.Unmarshal(pub.reservedBody, &ev); err != nil {
-					t.Fatalf("reserved payload not JSON: %v", err)
-				}
-				if ev.OrderID != validEvent.OrderID || ev.UserID != validEvent.UserID || ev.EventType != EventTypeStockReserved {
-					t.Fatalf("reserved payload mismatch: %+v", ev)
-				}
-				if !reflect.DeepEqual(ev.Items, []StockLine{{ProductID: "p1", Quantity: 2}, {ProductID: "p2", Quantity: 1}}) {
-					t.Fatalf("reserved items=%+v", ev.Items)
-				}
-				if pub.depletedCalled {
-					t.Fatalf("PublishStockDepleted should not be called")
-				}
-			},
-		},
-		{
-			name: "publishes stock depleted on insufficient stock",
-			body: mustMarshal(validEvent, t),
-			repo: &fakeInventory{
-				result: inventory.ReserveResult{
-					Reserved: []inventory.Line{{ProductID: "p2", Quantity: 1}},
-					Depleted: []inventory.DepletedLine{{ProductID: "p1", Requested: 2, Available: 1}},
-				},
-			},
-			pub:      &fakePublisher{},
-			wantRepo: true,
-			assertFunc: func(t *testing.T, repo *fakeInventory, pub *fakePublisher) {
-				t.Helper()
-				if !pub.depletedCalled {
-					t.Fatalf("PublishStockDepleted not called")
-				}
-				if pub.depletedQueue != StockDepletedQueue {
-					t.Fatalf("depleted queue=%s want=%s", pub.depletedQueue, StockDepletedQueue)
-				}
-
-				var ev StockDepleted
-				if err := json.Unmarshal(pub.depletedBody, &ev); err != nil {
-					t.Fatalf("depleted payload not JSON: %v", err)
-				}
-				if ev.OrderID != validEvent.OrderID || ev.UserID != validEvent.UserID || ev.EventType != EventTypeStockDepleted {
-					t.Fatalf("depleted payload mismatch: %+v", ev)
-				}
-				wantDepleted := []DepletedLine{{ProductID: "p1", Requested: 2, Available: 1}}
-				if !reflect.DeepEqual(ev.Depleted, wantDepleted) {
-					t.Fatalf("depleted lines=%+v want=%+v", ev.Depleted, wantDepleted)
-				}
-				wantReserved := []StockLine{{ProductID: "p2", Quantity: 1}}
-				if !reflect.DeepEqual(ev.Reserved, wantReserved) {
-					t.Fatalf("reserved lines=%+v want=%+v", ev.Reserved, wantReserved)
-				}
-				if pub.reservedCalled {
-					t.Fatalf("PublishStockReserved should not be called")
-				}
-			},
-		},
-		{
-			name:    "returns error on invalid JSON and does not publish",
-			body:    []byte(`{"orderId":`),
-			repo:    &fakeInventory{},
-			pub:     &fakePublisher{},
-			wantErr: true,
-			assertFunc: func(t *testing.T, repo *fakeInventory, pub *fakePublisher) {
-				t.Helper()
-				if repo.called {
-					t.Fatalf("Reserve should not be called on invalid JSON")
-				}
-				if pub.reservedCalled || pub.depletedCalled {
-					t.Fatalf("publisher should not be called on invalid JSON")
-				}
-			},
-		},
-		{
-			name: "returns error on publisher failure",
-			body: mustMarshal(validEvent, t),
-			repo: &fakeInventory{
-				result: inventory.ReserveResult{
-					Reserved: []inventory.Line{{ProductID: "p1", Quantity: 2}},
-				},
-			},
-			pub:      &fakePublisher{reservedErr: errors.New("publish failed")},
-			wantErr:  true,
-			wantRepo: true,
-			assertFunc: func(t *testing.T, repo *fakeInventory, pub *fakePublisher) {
-				t.Helper()
-				if !pub.reservedCalled {
-					t.Fatalf("PublishStockReserved should be called even when returning error")
-				}
-			},
-		},
-		{
-			name: "returns error on repository failure",
-			body: mustMarshal(validEvent, t),
-			repo: &fakeInventory{
-				err: errors.New("db down"),
-			},
-			pub:     &fakePublisher{},
-			wantErr: true,
-			assertFunc: func(t *testing.T, repo *fakeInventory, pub *fakePublisher) {
-				t.Helper()
-				if pub.reservedCalled || pub.depletedCalled {
-					t.Fatalf("publisher should not be called on repository error")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			handler := OrderCreatedHandler(tt.repo, tt.pub, log.New(io.Discard, "", 0))
-			err := handler(context.Background(), tt.body)
-
-			if tt.wantErr && err == nil {
-				t.Fatalf("expected error, got nil")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if tt.wantRepo && !tt.repo.called {
-				t.Fatalf("Reserve was not called")
-			}
-			tt.assertFunc(t, tt.repo, tt.pub)
-		})
+	return &fakeStore{
+		available:   cp,
+		checkpoints: make(map[string]map[string]int64),
 	}
 }
 
-func mustMarshal(ev OrderCreated, t *testing.T) []byte {
-	t.Helper()
-	body, err := json.Marshal(ev)
-	if err != nil {
-		t.Fatalf("marshal event: %v", err)
-	}
-	return body
+type fakeTransactionalRepo struct {
+	store      *fakeStore
+	reserveErr error
 }
+
+func (r *fakeTransactionalRepo) Get(ctx context.Context, productID string) (inventory.StockItem, error) {
+	return inventory.StockItem{}, nil
+}
+
+func (r *fakeTransactionalRepo) SetAvailable(ctx context.Context, productID string, available int) error {
+	r.store.available[productID] = available
+	return nil
+}
+
+func (r *fakeTransactionalRepo) Reserve(ctx context.Context, orderID string, lines []inventory.Line) (inventory.ReserveResult, error) {
+	tx, _ := r.BeginTx(ctx, pgx.TxOptions{})
+	res, err := r.ReserveWithTx(ctx, tx, orderID, lines)
+	if err == nil {
+		_ = tx.Commit(ctx)
+	}
+	return res, err
+}
+
+func (r *fakeTransactionalRepo) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
+	return newFakeTx(r.store), nil
+}
+
+func (r *fakeTransactionalRepo) ReserveWithTx(ctx context.Context, tx pgx.Tx, orderID string, lines []inventory.Line) (inventory.ReserveResult, error) {
+	if r.reserveErr != nil {
+		return inventory.ReserveResult{}, r.reserveErr
+	}
+	fTx := tx.(*fakeTx)
+	return fTx.reserve(lines), nil
+}
+
+type fakeTx struct {
+	store              *fakeStore
+	pendingAvailable   map[string]int
+	pendingCheckpoints map[string]map[string]int64
+	closed             bool
+}
+
+func newFakeTx(store *fakeStore) *fakeTx {
+	return &fakeTx{
+		store:              store,
+		pendingAvailable:   make(map[string]int),
+		pendingCheckpoints: make(map[string]map[string]int64),
+	}
+}
+
+func (t *fakeTx) Begin(ctx context.Context) (pgx.Tx, error) { return t, nil }
+func (t *fakeTx) Commit(ctx context.Context) error {
+	if t.closed {
+		return pgx.ErrTxClosed
+	}
+	for k, v := range t.pendingAvailable {
+		t.store.available[k] = v
+	}
+	for consumer, parts := range t.pendingCheckpoints {
+		if _, ok := t.store.checkpoints[consumer]; !ok {
+			t.store.checkpoints[consumer] = make(map[string]int64)
+		}
+		for pk, seq := range parts {
+			t.store.checkpoints[consumer][pk] = seq
+		}
+	}
+	t.closed = true
+	return nil
+}
+func (t *fakeTx) Rollback(ctx context.Context) error {
+	t.closed = true
+	return nil
+}
+func (t *fakeTx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	return 0, nil
+}
+func (t *fakeTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	return &fakeBatchResults{}
+}
+func (t *fakeTx) LargeObjects() pgx.LargeObjects { return pgx.LargeObjects{} }
+func (t *fakeTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+	return nil, nil
+}
+func (t *fakeTx) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
+	if len(arguments) == 3 {
+		consumer, _ := arguments[0].(string)
+		partition, _ := arguments[1].(string)
+		seq, _ := arguments[2].(int64)
+		if _, ok := t.pendingCheckpoints[consumer]; !ok {
+			t.pendingCheckpoints[consumer] = make(map[string]int64)
+		}
+		existing := t.store.checkpoints[consumer][partition]
+		if seq < existing {
+			seq = existing
+		}
+		if pending := t.pendingCheckpoints[consumer][partition]; pending > seq {
+			seq = pending
+		}
+		t.pendingCheckpoints[consumer][partition] = seq
+	}
+	return pgconn.CommandTag{}, nil
+}
+func (t *fakeTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	return nil, nil
+}
+func (t *fakeTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	row := &fakeRow{}
+	if len(args) == 2 {
+		consumer, _ := args[0].(string)
+		partition, _ := args[1].(string)
+		if parts, ok := t.pendingCheckpoints[consumer]; ok {
+			if seq, ok := parts[partition]; ok {
+				row.val = seq
+				return row
+			}
+		}
+		if seq, ok := t.store.checkpoints[consumer][partition]; ok {
+			row.val = seq
+			return row
+		}
+		row.err = pgx.ErrNoRows
+	}
+	return row
+}
+func (t *fakeTx) Conn() *pgx.Conn { return nil }
+
+func (t *fakeTx) reserve(lines []inventory.Line) inventory.ReserveResult {
+	res := inventory.ReserveResult{}
+	working := make(map[string]int)
+	for k, v := range t.store.available {
+		working[k] = v
+	}
+
+	for _, line := range lines {
+		available := working[line.ProductID]
+		if available < line.Quantity {
+			res.Depleted = append(res.Depleted, inventory.DepletedLine{
+				ProductID: line.ProductID,
+				Requested: line.Quantity,
+				Available: available,
+			})
+		} else {
+			working[line.ProductID] = available - line.Quantity
+			res.Reserved = append(res.Reserved, inventory.Line{ProductID: line.ProductID, Quantity: line.Quantity})
+		}
+	}
+
+	if len(res.Depleted) == 0 {
+		for k, v := range working {
+			t.pendingAvailable[k] = v
+		}
+	}
+	return res
+}
+
+type fakeRow struct {
+	val int64
+	err error
+}
+
+func (r *fakeRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
+	if len(dest) == 1 {
+		switch d := dest[0].(type) {
+		case *int64:
+			*d = r.val
+		}
+	}
+	return nil
+}
+
+type fakeBatchResults struct{}
+
+func (f *fakeBatchResults) Exec() (pgconn.CommandTag, error) { return pgconn.CommandTag{}, nil }
+func (f *fakeBatchResults) Query() (pgx.Rows, error)         { return nil, nil }
+func (f *fakeBatchResults) QueryRow() pgx.Row                { return &fakeRow{} }
+func (f *fakeBatchResults) Close() error                     { return nil }

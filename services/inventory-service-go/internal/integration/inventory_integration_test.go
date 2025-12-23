@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -53,42 +54,36 @@ func TestInventoryIntegration(t *testing.T) {
 	orderConn := dialAMQP(ctx, t, rabbitURL)
 	defer orderConn.Close()
 
-	orderWithStock := events.OrderCreated{
-		EventType: events.EventTypeOrderCreated,
-		OrderID:   "order-1",
-		UserID:    "user-1",
-		Timestamp: time.Now().UTC(),
-		Items: []events.CartItem{
-			{ProductID: productA, Quantity: 2},
-		},
-	}
+	orderWithStockID := "f1e2d3c4-b5a6-4988-99aa-bbccddeeff11"
+	orderWithStock := newOrderCreated(orderWithStockID, "user-1", []events.OrderLineItem{
+		{ProductID: productA, Quantity: 2},
+	}, 1)
 	publishOrderCreated(ctx, t, orderConn, orderWithStock)
 	reserved := waitForStockReserved(ctx, t, orderConn)
-	require.Equal(t, orderWithStock.OrderID, reserved.OrderID)
-	require.Len(t, reserved.Items, 1)
-	require.Equal(t, productA, reserved.Items[0].ProductID)
-	require.Equal(t, 2, reserved.Items[0].Quantity)
+	require.Equal(t, orderWithStock.Payload.OrderID, reserved.Payload.OrderID)
+	require.Equal(t, reserved.EventEnvelope.PartitionKey, reserved.Payload.OrderID)
+	require.Len(t, reserved.Payload.Items, 1)
+	require.Equal(t, productA, reserved.Payload.Items[0].ProductID)
+	require.Equal(t, 2, reserved.Payload.Items[0].Quantity)
+	require.Equal(t, orderWithStock.EventEnvelope.CorrelationID, reserved.EventEnvelope.CorrelationID)
+	require.Equal(t, orderWithStock.EventEnvelope.EventID, reserved.EventEnvelope.CausationID)
 
 	waitForAvailability(ctx, t, client, app.baseURL, productA, 3)
 	waitForAvailability(ctx, t, client, app.baseURL, productB, 1)
 
-	orderInsufficient := events.OrderCreated{
-		EventType: events.EventTypeOrderCreated,
-		OrderID:   "order-2",
-		UserID:    "user-2",
-		Timestamp: time.Now().UTC(),
-		Items: []events.CartItem{
-			{ProductID: productA, Quantity: 2},
-			{ProductID: productB, Quantity: 2},
-		},
-	}
+	orderInsufficientID := "f1e2d3c4-b5a6-4988-99aa-bbccddeeff22"
+	orderInsufficient := newOrderCreated(orderInsufficientID, "user-2", []events.OrderLineItem{
+		{ProductID: productA, Quantity: 2},
+		{ProductID: productB, Quantity: 2},
+	}, 2)
 	publishOrderCreated(ctx, t, orderConn, orderInsufficient)
 	depleted := waitForStockDepleted(ctx, t, orderConn)
-	require.Equal(t, orderInsufficient.OrderID, depleted.OrderID)
-	require.Len(t, depleted.Depleted, 1)
-	require.Equal(t, productB, depleted.Depleted[0].ProductID)
-	require.Equal(t, 2, depleted.Depleted[0].Requested)
-	require.Equal(t, 1, depleted.Depleted[0].Available)
+	require.Equal(t, orderInsufficient.Payload.OrderID, depleted.Payload.OrderID)
+	require.Len(t, depleted.Payload.Depleted, 1)
+	require.Equal(t, productB, depleted.Payload.Depleted[0].ProductID)
+	require.Equal(t, 2, depleted.Payload.Depleted[0].Requested)
+	require.Equal(t, 1, depleted.Payload.Depleted[0].Available)
+	require.Equal(t, orderInsufficient.EventEnvelope.CorrelationID, depleted.EventEnvelope.CorrelationID)
 
 	waitForAvailability(ctx, t, client, app.baseURL, productA, 3)
 	waitForAvailability(ctx, t, client, app.baseURL, productB, 1)
@@ -111,7 +106,7 @@ func startInventoryService(ctx context.Context, t *testing.T, dbURL, rabbitURL s
 	logger := log.New(io.Discard, "", log.LstdFlags)
 
 	serviceCtx, cancel := context.WithCancel(ctx)
-	consumer, cleanupPub, err := events.StartOrderCreatedConsumer(serviceCtx, conn, repo, logger)
+	consumer, cleanupPub, err := events.StartOrderCreatedConsumer(serviceCtx, conn, pool, repo, logger)
 	require.NoError(t, err)
 	_ = consumer
 
@@ -232,7 +227,7 @@ func seedStock(ctx context.Context, t *testing.T, client *http.Client, baseURL, 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-func publishOrderCreated(ctx context.Context, t *testing.T, conn *amqp.Connection, order events.OrderCreated) {
+func publishOrderCreated(ctx context.Context, t *testing.T, conn *amqp.Connection, order events.EnvelopedOrderCreated) {
 	t.Helper()
 
 	ch, err := conn.Channel()
@@ -256,18 +251,18 @@ func publishOrderCreated(ctx context.Context, t *testing.T, conn *amqp.Connectio
 	require.NoError(t, err)
 }
 
-func waitForStockReserved(ctx context.Context, t *testing.T, conn *amqp.Connection) events.StockReserved {
+func waitForStockReserved(ctx context.Context, t *testing.T, conn *amqp.Connection) events.StockReservedEvent {
 	t.Helper()
 
-	var ev events.StockReserved
+	var ev events.StockReservedEvent
 	waitForMessage(ctx, t, conn, events.StockReservedQueue, &ev)
 	return ev
 }
 
-func waitForStockDepleted(ctx context.Context, t *testing.T, conn *amqp.Connection) events.StockDepleted {
+func waitForStockDepleted(ctx context.Context, t *testing.T, conn *amqp.Connection) events.StockDepletedEvent {
 	t.Helper()
 
-	var ev events.StockDepleted
+	var ev events.StockDepletedEvent
 	waitForMessage(ctx, t, conn, events.StockDepletedQueue, &ev)
 	return ev
 }
@@ -369,4 +364,28 @@ func dialAMQP(ctx context.Context, t *testing.T, rabbitURL string) *amqp.Connect
 	})
 	require.NoError(t, err)
 	return conn
+}
+
+func newOrderCreated(orderID, userID string, items []events.OrderLineItem, seq int64) events.EnvelopedOrderCreated {
+	now := time.Now().UTC()
+	return events.EnvelopedOrderCreated{
+		EventEnvelope: events.EventEnvelope{
+			EventName:     events.EventTypeOrderCreated,
+			EventVersion:  1,
+			EventID:       uuid.NewString(),
+			CorrelationID: uuid.NewString(),
+			Producer:      "order-service",
+			PartitionKey:  orderID,
+			Sequence:      seq,
+			OccurredAt:    now,
+			Schema:        "contracts/events/order/OrderCreated.v1.payload.schema.json",
+		},
+		Payload: events.OrderCreatedPayload{
+			OrderID:     orderID,
+			UserID:      userID,
+			Items:       items,
+			TotalAmount: 0,
+			Timestamp:   now,
+		},
+	}
 }
