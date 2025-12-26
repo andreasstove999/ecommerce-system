@@ -1,14 +1,14 @@
-package main.java.service;
+package service;
 
-import main.java.config.RabbitConfig;
-import main.java.domain.Address;
-import main.java.domain.ProcessedEvent;
-import main.java.domain.Shipment;
-import main.java.events.EventEnvelope;
-import main.java.events.order.OrderCompletedPayload;
-import main.java.events.shipping.ShippingCreatedPayload;
-import main.java.repo.ProcessedEventRepository;
-import main.java.repo.ShipmentRepository;
+import config.RabbitConfig;
+import domain.Address;
+import domain.ProcessedEvent;
+import domain.Shipment;
+import events.EventEnvelope;
+import events.order.OrderCompletedPayload;
+import events.shipping.ShippingCreatedPayload;
+import repo.ProcessedEventRepository;
+import repo.ShipmentRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;

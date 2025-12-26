@@ -1,7 +1,7 @@
-package main.java.service;
+package service;
 
-import main.java.domain.EventSequence;
-import main.java.repo.EventSequenceRepository;
+import domain.EventSequence;
+import repo.EventSequenceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

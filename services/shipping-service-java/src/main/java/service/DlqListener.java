@@ -1,6 +1,6 @@
-package main.java.service;
+package service;
 
-import main.java.config.RabbitConfig;
+import config.RabbitConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

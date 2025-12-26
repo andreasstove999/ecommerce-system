@@ -1,6 +1,6 @@
-package main.java.repo;
+package repo;
 
-import main.java.domain.ProcessedEvent;
+import domain.ProcessedEvent;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 

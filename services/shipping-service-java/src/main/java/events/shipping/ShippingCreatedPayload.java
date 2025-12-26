@@ -1,4 +1,4 @@
-package main.java.events.shipping;
+package events.shipping;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

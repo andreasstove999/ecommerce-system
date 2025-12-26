@@ -1,7 +1,7 @@
-package main.java.controller;
+package controller;
 
-import main.java.domain.Shipment;
-import main.java.repo.ShipmentRepository;
+import domain.Shipment;
+import repo.ShipmentRepository;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

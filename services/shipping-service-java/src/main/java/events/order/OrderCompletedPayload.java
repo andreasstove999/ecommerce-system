@@ -1,4 +1,4 @@
-package main.java.events.order;
+package events.order;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

@@ -1,8 +1,8 @@
-package main.java.service;
+package service;
 
-import main.java.config.RabbitConfig;
-import main.java.events.EventEnvelope;
-import main.java.events.shipping.ShippingCreatedPayload;
+import config.RabbitConfig;
+import events.EventEnvelope;
+import events.shipping.ShippingCreatedPayload;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;

@@ -1,6 +1,6 @@
-package main.java.repo;
+package repo;
 
-import main.java.domain.EventSequence;
+import domain.EventSequence;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
