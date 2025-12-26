@@ -38,8 +38,8 @@ public class PostgresCatalogRepository implements CatalogRepository {
             p.setActive(rs.getBoolean("active"));
 
             // TIMESTAMPTZ -> Instant
-            p.setCreatedAt(rs.getObject("created_at", Instant.class));
-            p.setUpdatedAt(rs.getObject("updated_at", Instant.class));
+            p.setCreatedAt(rs.getTimestamp("created_at").toInstant());
+            p.setUpdatedAt(rs.getTimestamp("updated_at").toInstant());
             return p;
         }
     };
