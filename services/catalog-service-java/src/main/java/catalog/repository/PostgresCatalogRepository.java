@@ -9,6 +9,7 @@ import catalog.domain.Product;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -93,8 +94,8 @@ public class PostgresCatalogRepository implements CatalogRepository {
                 product.getPrice(),
                 product.getCurrency(),
                 product.isActive(),
-                product.getCreatedAt(),
-                product.getUpdatedAt());
+                Timestamp.from(product.getCreatedAt()),
+                Timestamp.from(product.getUpdatedAt()));
 
         return product;
     }
