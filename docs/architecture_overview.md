@@ -199,6 +199,8 @@ sequenceDiagram
 - Simulates shipment label creation.
 - Publishes **ShippingCreated**.
 
+TODO: Catalog Service (Java)    
+
 ---
 
 ## Event Contracts (Examples)
