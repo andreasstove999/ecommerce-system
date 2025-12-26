@@ -36,10 +36,6 @@ func NewPublisher(conn *amqp.Connection, seqRepo sequence.Repository, publishEnv
 	if err != nil {
 		return nil, fmt.Errorf("declare %s: %w", OrderCreatedQueue, err)
 	}
-	_, err = ch.QueueDeclare(OrderCompletedQueue, true, false, false, false, nil)
-	if err != nil {
-		return nil, fmt.Errorf("declare %s: %w", OrderCompletedQueue, err)
-	}
 
 	return &Publisher{
 		ch:               ch,
