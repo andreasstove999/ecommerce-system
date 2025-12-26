@@ -125,10 +125,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://catalog-db:5432/catalog_db
       - SPRING_DATASOURCE_USERNAME=catalog_user
       - SPRING_DATASOURCE_PASSWORD=catalog_pass
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - catalog-db
-      - rabbitmq
     ports:
       - "8086:8086"
 

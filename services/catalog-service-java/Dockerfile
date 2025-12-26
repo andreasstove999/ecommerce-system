@@ -7,6 +7,6 @@ RUN mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar /app/app.jar
-ENV PORT=8083
-EXPOSE 8083
+ENV PORT=8086
+EXPOSE 8086
 ENTRYPOINT ["java","-jar","/app/app.jar"]
