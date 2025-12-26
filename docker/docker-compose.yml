@@ -10,6 +10,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   cart-service-go:
     build:
@@ -21,8 +26,10 @@ services:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - CART_DB_DSN=postgres://cart_user:cart_pass@cart-db:5432/cart_db?sslmode=disable
     depends_on:
-      - rabbitmq
-      - cart-db
+      rabbitmq:
+        condition: service_healthy
+      cart-db:
+        condition: service_healthy
     ports:
       - "8081:8081"
 
@@ -32,6 +39,11 @@ services:
       - POSTGRES_DB=cart_db
       - POSTGRES_USER=cart_user
       - POSTGRES_PASSWORD=cart_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cart_user -d cart_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5433:5432"
     volumes:
@@ -46,8 +58,10 @@ services:
       - ORDER_DB_DSN=postgres://order_user:order_pass@order-db:5432/order_db?sslmode=disable
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
-      - order-db
-      - rabbitmq
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "8082:8082"
   order-db:
@@ -56,6 +70,11 @@ services:
       - POSTGRES_DB=order_db
       - POSTGRES_USER=order_user
       - POSTGRES_PASSWORD=order_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5434:5432"
     volumes:
@@ -73,8 +92,10 @@ services:
       - RUN_MIGRATIONS=true
       - MIGRATIONS_PATH=./internal/db/migrations
     depends_on:
-      - rabbitmq
-      - inventory-db
+      rabbitmq:
+        condition: service_healthy
+      inventory-db:
+        condition: service_healthy
     ports:
       - "8083:8083"
 
@@ -85,6 +106,11 @@ services:
       - POSTGRES_DB=inventory_db
       - POSTGRES_USER=inventory_user
       - POSTGRES_PASSWORD=inventory_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5435:5432"
     volumes:
@@ -97,6 +123,11 @@ services:
       - POSTGRES_DB=payment_db
       - POSTGRES_USER=payment_user
       - POSTGRES_PASSWORD=payment_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5436:5432"
     volumes:
@@ -110,8 +141,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
-      - rabbitmq
-      - payment-db
+      rabbitmq:
+        condition: service_healthy
+      payment-db:
+        condition: service_healthy
     ports:
       - "8085:8080"
 
@@ -126,7 +159,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=catalog_user
       - SPRING_DATASOURCE_PASSWORD=catalog_pass
     depends_on:
-      - catalog-db
+      catalog-db:
+        condition: service_healthy
     ports:
       - "8086:8086"
 
@@ -137,6 +171,11 @@ services:
       - POSTGRES_DB=catalog_db
       - POSTGRES_USER=catalog_user
       - POSTGRES_PASSWORD=catalog_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog_user -d catalog_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5437:5432"
     volumes:
@@ -159,8 +198,10 @@ services:
       - SPRING_DATASOURCE_USERNAME=shipping_user
       - SPRING_DATASOURCE_PASSWORD=shipping_pass
     depends_on:
-      - rabbitmq
-      - shipping-db
+      rabbitmq:
+        condition: service_healthy
+      shipping-db:
+        condition: service_healthy
     ports:
       - "8087:8086"   
 
@@ -171,6 +212,11 @@ services:
       - POSTGRES_DB=shipping_db
       - POSTGRES_USER=shipping_user
       - POSTGRES_PASSWORD=shipping_pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipping_user -d shipping_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5438:5432"   
     volumes:
