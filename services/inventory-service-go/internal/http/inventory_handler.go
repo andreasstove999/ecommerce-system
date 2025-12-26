@@ -1,8 +1,11 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"net/http"
 
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
@@ -39,17 +42,22 @@ func (h *Handler) GetAvailability(w http.ResponseWriter, r *http.Request) {
 
 type adjustRequest struct {
 	ProductID string `json:"productId"`
-	Available int    `json:"available"`
+	Available int    `json:"available,string"`
 }
 
 func (h *Handler) AdjustAvailability(w http.ResponseWriter, r *http.Request) {
 	var req adjustRequest
+	bodyBytes, _ := io.ReadAll(r.Body)
+	log.Println("Request Body:", string(bodyBytes))
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		http.Error(w, "bad request decoding", http.StatusBadRequest)
 		return
 	}
+	log.Println(req)
 	if req.ProductID == "" || req.Available < 0 {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		http.Error(w, "bad request invalid payload", http.StatusBadRequest)
 		return
 	}
 

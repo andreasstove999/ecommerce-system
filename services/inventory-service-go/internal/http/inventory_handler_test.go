@@ -120,6 +120,27 @@ func TestAdjustAvailability_OK(t *testing.T) {
 	}
 }
 
+func TestAdjustAvailability_StringValue(t *testing.T) {
+	repo := &fakeRepo{items: map[string]int{}}
+	h := NewHandler(repo)
+	r := NewRouter(h)
+
+	// Sending "7" as a string instead of a number
+	body := bytes.NewBufferString(`{"productId":"p1","available":"7"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/inventory/adjust", body)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	r.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d, body: %s", res.Code, res.Body.String())
+	}
+
+	if got := repo.items["p1"]; got != 7 {
+		t.Fatalf("expected repo to store 7, got %d", got)
+	}
+}
+
 func TestAdjustAvailability_InvalidJSON(t *testing.T) {
 	h := NewHandler(&fakeRepo{items: map[string]int{}})
 	r := NewRouter(h)

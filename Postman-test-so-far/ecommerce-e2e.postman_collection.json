@@ -286,7 +286,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": \"{{initialStock}}\"\n}",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": {{initialStock}}\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -364,7 +364,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": \"{{quantity}}\",\n    \"price\": \"{{price}}\"\n}",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": {{quantity}},\n    \"price\": {{price}}\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -678,7 +678,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": \"{{quantity}}\",\n    \"price\": \"{{price}}\"\n}",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": {{quantity}},\n    \"price\": {{price}}\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -936,7 +936,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": \"{{initialStock}}\"\n}",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": {{initialStock}}\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
