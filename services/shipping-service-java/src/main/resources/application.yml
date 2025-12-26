@@ -1,0 +1,25 @@
+server:
+  port: ${PORT:8086}
+
+spring:
+  application:
+    name: shipping-service
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@rabbitmq:5672/}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://shipping-db:5432/shipping_db}
+    username: ${SPRING_DATASOURCE_USERNAME:shipping_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:shipping_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
