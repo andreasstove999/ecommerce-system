@@ -142,7 +142,43 @@ services:
     volumes:
       - catalog_db_data:/var/lib/postgresql/data
 
+  shipping-service-java:
+    build:
+      context: ../services/shipping-service-java
+      dockerfile: Dockerfile
+    container_name: shipping-service-java
+    environment:
+      - PORT=8086
+
+      # Spring RabbitMQ (correct format)
+      - SPRING_RABBITMQ_ADDRESSES=rabbitmq:5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://shipping-db:5432/shipping_db
+      - SPRING_DATASOURCE_USERNAME=shipping_user
+      - SPRING_DATASOURCE_PASSWORD=shipping_pass
+    depends_on:
+      - rabbitmq
+      - shipping-db
+    ports:
+      - "8087:8086"   
+
+  shipping-db:
+    image: postgres:16
+    container_name: shipping-db
+    environment:
+      - POSTGRES_DB=shipping_db
+      - POSTGRES_USER=shipping_user
+      - POSTGRES_PASSWORD=shipping_pass
+    ports:
+      - "5438:5432"   
+    volumes:
+      - shipping_db_data:/var/lib/postgresql/data
+
+
 
 volumes:
   payment_db_data:
   catalog_db_data:
+  shipping_db_data:
