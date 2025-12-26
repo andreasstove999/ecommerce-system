@@ -1,0 +1,1224 @@
+{
+    "info": {
+        "_postman_id": "ecommerce-e2e-autogen",
+        "name": "Ecommerce E2E",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health Checks",
+            "item": [
+                {
+                    "name": "Cart Health - GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/health",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('has service', ()=> { const json = pm.response.json(); pm.expect(json.service).to.exist; });"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Order Health - GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/health",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Inventory Health - GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/health",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('body ok', ()=> pm.expect(pm.response.text()).to.include('ok'));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Catalog Health - GET /api/catalog/health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/health",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Payment Health - GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{paymentBaseUrl}}/health",
+                            "host": [
+                                "{{paymentBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Shipping Health (TODO) - no health endpoint",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{shippingBaseUrl}}/health",
+                            "host": [
+                                "{{shippingBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('health may be missing', function(){ pm.expect([200,404]).to.include(pm.response.code); });"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "E2E Happy Path",
+            "item": [
+                {
+                    "name": "Init Run (generate userId)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/health",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const newUser = `u-${pm.variables.replaceIn('{{$guid}}')}`;",
+                                    "pm.environment.set('userId', newUser);",
+                                    "pm.environment.unset('orderId');",
+                                    "pm.environment.unset('cartId');",
+                                    "pm.environment.unset('paymentId');",
+                                    "pm.environment.unset('shipmentId');",
+                                    "pm.environment.set('pollTry','0');",
+                                    "pm.environment.set('inventoryPollTry','0');",
+                                    "pm.environment.set('paymentPollTry','0');",
+                                    "pm.environment.set('shippingPollTry','0');",
+                                    "pm.test('userId initialized', ()=> pm.expect(pm.environment.get('userId')).to.match(/^u-/));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Catalog Create Product",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/products",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "products"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"sku\": \"sku-{{$timestamp}}\",\n    \"name\": \"Test Product {{$timestamp}}\",\n    \"description\": \"generated via postman\",\n    \"price\": 100,\n    \"currency\": \"USD\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "let body = pm.response.json();",
+                                    "pm.test('status 201', ()=> pm.response.to.have.status(201));",
+                                    "pm.environment.set('productId', body.id);",
+                                    "pm.environment.set('price', body.price);",
+                                    "pm.test('productId captured', ()=> pm.expect(pm.environment.get('productId')).to.exist);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Inventory Seed Stock - POST /api/inventory/adjust",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/api/inventory/adjust",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "inventory",
+                                "adjust"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": \"{{initialStock}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('seed ok flag', ()=> { const json = pm.response.json(); pm.expect(json.ok).to.be.true;});",
+                                    "const expected = parseInt(pm.environment.get('initialStock')||'0',10);",
+                                    "pm.environment.set('expectedStockAfter', String(expected - parseInt(pm.environment.get('quantity')||'0',10)));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Inventory Verify Seed - GET /api/inventory/{productId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/api/inventory/{{productId}}",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "inventory",
+                                "{{productId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "const json = pm.response.json();",
+                                    "pm.test('has available', ()=> pm.expect(json.available).to.be.a('number'));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Cart AddItem - POST /api/cart/{userId}/items",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}/items",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}",
+                                "items"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": \"{{quantity}}\",\n    \"price\": \"{{price}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "const json = pm.response.json();",
+                                    "if(json.cartId){ pm.environment.set('cartId', json.cartId);}",
+                                    "pm.test('cart captured', ()=> pm.expect(pm.environment.get('cartId')).to.exist);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Cart Get - GET /api/cart/{userId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Cart Checkout - POST /api/cart/{userId}/checkout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}/checkout",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}",
+                                "checkout"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('checkout status', ()=> { const json = pm.response.json(); pm.expect(json.status).to.exist;});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Poll Orders Until Created",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/api/users/{{userId}}/orders",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "users",
+                                "{{userId}}",
+                                "orders"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "let currentTry = parseInt(pm.environment.get('pollTry')||'0',10);",
+                                    "const maxTry = parseInt(pm.environment.get('pollMax')||'12',10);",
+                                    "let orders = [];",
+                                    "try { orders = pm.response.json(); } catch(e) { orders = []; }",
+                                    "const found = Array.isArray(orders) && orders.length > 0;",
+                                    "if(found){ pm.environment.set('orderId', orders[0].orderId || orders[0].id); pm.environment.set('pollTry','0'); }",
+                                    "if(!found && currentTry < maxTry){ pm.environment.set('pollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Orders Until Created'); }",
+                                    "pm.test('order created or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Order - GET /api/orders/{orderId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/api/orders/{{orderId}}",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "orders",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "const json = pm.response.json();",
+                                    "pm.test('matches user', ()=> pm.expect(json.userId).to.eql(pm.environment.get('userId')));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Poll Inventory Until Reserved",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/api/inventory/{{productId}}",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "inventory",
+                                "{{productId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "let currentTry = parseInt(pm.environment.get('inventoryPollTry')||'0',10);",
+                                    "const maxTry = parseInt(pm.environment.get('inventoryPollMax')||'12',10);",
+                                    "let json = {}; try { json = pm.response.json(); } catch(e) {}",
+                                    "const target = parseInt(pm.environment.get('expectedStockAfter')||'0',10);",
+                                    "const ok = json.available === undefined ? false : json.available <= target;",
+                                    "if(!ok && currentTry < maxTry){ pm.environment.set('inventoryPollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Inventory Until Reserved'); }",
+                                    "pm.test('inventory reserved or retrying', ()=> pm.expect(ok || currentTry < maxTry).to.be.true);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Poll Payment Until Recorded",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{paymentBaseUrl}}/api/payments/by-order/{{orderId}}",
+                            "host": [
+                                "{{paymentBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payments",
+                                "by-order",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "let currentTry = parseInt(pm.environment.get('paymentPollTry')||'0',10);",
+                                    "const maxTry = parseInt(pm.environment.get('paymentPollMax')||'12',10);",
+                                    "let json={}; try { json = pm.response.json(); } catch(e){}",
+                                    "const found = pm.response.code === 200 && json.id !== undefined;",
+                                    "if(found){ pm.environment.set('paymentId', json.id || json.paymentId); pm.environment.set('paymentPollTry','0'); }",
+                                    "if(!found && currentTry < maxTry){ pm.environment.set('paymentPollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Payment Until Recorded'); }",
+                                    "pm.test('payment located or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Poll Shipping Until Ready",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{shippingBaseUrl}}/api/shipping/by-order/{{orderId}}",
+                            "host": [
+                                "{{shippingBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "shipping",
+                                "by-order",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "let currentTry = parseInt(pm.environment.get('shippingPollTry')||'0',10);",
+                                    "const maxTry = parseInt(pm.environment.get('shippingPollMax')||'12',10);",
+                                    "let json={}; try { json = pm.response.json(); } catch(e){}",
+                                    "const found = pm.response.code === 200 && json.id !== undefined;",
+                                    "if(found){ pm.environment.set('shipmentId', json.id || json.shippingId); pm.environment.set('shippingPollTry','0'); }",
+                                    "if(!found && currentTry < maxTry){ pm.environment.set('shippingPollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Shipping Until Ready'); }",
+                                    "pm.test('shipment located or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Cart Service",
+            "item": [
+                {
+                    "name": "GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/health",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "POST /api/cart/{userId}/items",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}/items",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}",
+                                "items"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"quantity\": \"{{quantity}}\",\n    \"price\": \"{{price}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "const json = pm.response.json();",
+                                    "if(json.cartId){ pm.environment.set('cartId', json.cartId);}",
+                                    "pm.test('cart captured', ()=> pm.expect(pm.environment.get('cartId')).to.exist);"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/cart/{userId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "POST /api/cart/{userId}/checkout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{cartBaseUrl}}/api/cart/{{userId}}/checkout",
+                            "host": [
+                                "{{cartBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "cart",
+                                "{{userId}}",
+                                "checkout"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('checkout status', ()=> { const json = pm.response.json(); pm.expect(json.status).to.exist;});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Order Service",
+            "item": [
+                {
+                    "name": "GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/health",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/orders/{orderId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/api/orders/{{orderId}}",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "orders",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/users/{userId}/orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{orderBaseUrl}}/api/users/{{userId}}/orders",
+                            "host": [
+                                "{{orderBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "users",
+                                "{{userId}}",
+                                "orders"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Inventory Service",
+            "item": [
+                {
+                    "name": "GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/health",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/inventory/{productId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/api/inventory/{{productId}}",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "inventory",
+                                "{{productId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "POST /api/inventory/adjust",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{inventoryBaseUrl}}/api/inventory/adjust",
+                            "host": [
+                                "{{inventoryBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "inventory",
+                                "adjust"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"productId\": \"{{productId}}\",\n    \"available\": \"{{initialStock}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Catalog Service",
+            "item": [
+                {
+                    "name": "GET /api/catalog/health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/health",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/catalog/products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/products",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "products"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/catalog/products/{id}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/products/{{productId}}",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "products",
+                                "{{productId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "POST /api/catalog/products",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{catalogBaseUrl}}/api/catalog/products",
+                            "host": [
+                                "{{catalogBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "catalog",
+                                "products"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"sku\": \"sku-{{$timestamp}}\",\n    \"name\": \"Test Product {{$timestamp}}\",\n    \"description\": \"generated via postman\",\n    \"price\": 100,\n    \"currency\": \"USD\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 201', ()=> pm.response.to.have.status(201));"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Payment Service",
+            "item": [
+                {
+                    "name": "GET /health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{paymentBaseUrl}}/health",
+                            "host": [
+                                "{{paymentBaseUrl}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/payments/by-order/{orderId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{paymentBaseUrl}}/api/payments/by-order/{{orderId}}",
+                            "host": [
+                                "{{paymentBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payments",
+                                "by-order",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Shipping Service",
+            "item": [
+                {
+                    "name": "GET /api/shipping/{shippingId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{shippingBaseUrl}}/api/shipping/{{shipmentId}}",
+                            "host": [
+                                "{{shippingBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "shipping",
+                                "{{shipmentId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "GET /api/shipping/by-order/{orderId}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{shippingBaseUrl}}/api/shipping/by-order/{{orderId}}",
+                            "host": [
+                                "{{shippingBaseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "shipping",
+                                "by-order",
+                                "{{orderId}}"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('status 200 or 404', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

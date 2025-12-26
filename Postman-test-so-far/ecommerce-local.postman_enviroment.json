@@ -15,6 +15,36 @@
             "enabled": true
         },
         {
+            "key": "inventoryBaseUrl",
+            "value": "http://localhost:8083",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "catalogBaseUrl",
+            "value": "http://localhost:8086",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "paymentBaseUrl",
+            "value": "http://localhost:8085",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "shippingBaseUrl",
+            "value": "http://localhost:8087",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "rabbitmqManagementUrl",
+            "value": "http://localhost:15672",
+            "type": "default",
+            "enabled": true
+        },
+        {
             "key": "userId",
             "value": "",
             "type": "default",
@@ -22,7 +52,31 @@
         },
         {
             "key": "productId",
-            "value": "p1",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "cartId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "orderId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "paymentId",
+            "value": "",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "shipmentId",
+            "value": "",
             "type": "default",
             "enabled": true
         },
@@ -39,7 +93,13 @@
             "enabled": true
         },
         {
-            "key": "orderId",
+            "key": "initialStock",
+            "value": "10",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "expectedStockAfter",
             "value": "",
             "type": "default",
             "enabled": true
@@ -57,24 +117,6 @@
             "enabled": true
         },
         {
-            "key": "inventoryBaseUrl",
-            "value": "http://localhost:8083",
-            "type": "default",
-            "enabled": true
-        },
-        {
-            "key": "initialStock",
-            "value": "10",
-            "type": "default",
-            "enabled": true
-        },
-        {
-            "key": "expectedStockAfter",
-            "value": "",
-            "type": "default",
-            "enabled": true
-        },
-        {
             "key": "inventoryPollTry",
             "value": "0",
             "type": "default",
@@ -85,9 +127,33 @@
             "value": "12",
             "type": "default",
             "enabled": true
+        },
+        {
+            "key": "paymentPollTry",
+            "value": "0",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "paymentPollMax",
+            "value": "12",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "shippingPollTry",
+            "value": "0",
+            "type": "default",
+            "enabled": true
+        },
+        {
+            "key": "shippingPollMax",
+            "value": "12",
+            "type": "default",
+            "enabled": true
         }
     ],
     "_postman_variable_scope": "environment",
-    "_postman_exported_at": "2025-12-20T00:00:00.000Z",
+    "_postman_exported_at": "2025-12-26T14:05:24.216600Z",
     "_postman_exported_using": "Postman/11"
 }
