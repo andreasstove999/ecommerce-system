@@ -222,6 +222,37 @@ services:
     volumes:
       - shipping_db_data:/var/lib/postgresql/data
 
+  api-gateway-go:
+    build:
+      context: ../services/api-gateway-go
+      dockerfile: Dockerfile
+    container_name: api-gateway-go
+    environment:
+      - PORT=8080
+      - UPSTREAM_TIMEOUT=10s
+
+      # Upstreams (docker network addresses)
+      - CART_URL=http://cart-service-go:8081
+      - ORDER_URL=http://order-service-go:8082
+      - INVENTORY_URL=http://inventory-service-go:8083
+      - CATALOG_URL=http://catalog-service-java:8086
+      - PAYMENT_URL=http://payment-service-dotnet:8080
+      - SHIPPING_URL=http://shipping-service-java:8086
+
+    depends_on:
+      - cart-service-go
+      - order-service-go
+      - inventory-service-go
+      - catalog-service-java
+      - payment-service-dotnet
+      - shipping-service-java
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
 
 volumes:
