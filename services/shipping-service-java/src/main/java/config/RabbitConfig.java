@@ -1,13 +1,5 @@
 package config;
 
-import domain.Address;
-import domain.ProcessedEvent;
-import domain.Shipment;
-import events.EventEnvelope;
-import events.order.OrderCompletedPayload;
-import events.shipping.ShippingCreatedPayload;
-import repo.ProcessedEventRepository;
-import repo.ShipmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.Map;
@@ -18,6 +10,7 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFacto
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 
 @Configuration
 public class RabbitConfig {
@@ -69,12 +62,13 @@ public class RabbitConfig {
     }
 
     @Bean
-    public Jackson2JsonMessageConverter messageConverter(ObjectMapper om) {
+    public Jackson2JsonMessageConverter messageConverter(@NonNull ObjectMapper om) {
         return new Jackson2JsonMessageConverter(om);
     }
 
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory cf, Jackson2JsonMessageConverter converter) {
+    public RabbitTemplate rabbitTemplate(@NonNull ConnectionFactory cf,
+            @NonNull Jackson2JsonMessageConverter converter) {
         RabbitTemplate t = new RabbitTemplate(cf);
         t.setMessageConverter(converter);
         return t;
@@ -87,8 +81,8 @@ public class RabbitConfig {
      */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory cf,
-            Jackson2JsonMessageConverter converter) {
+            @NonNull ConnectionFactory cf,
+            @NonNull Jackson2JsonMessageConverter converter) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(cf);
         factory.setMessageConverter(converter);

@@ -38,6 +38,7 @@ class ShippingControllerIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void getByIdReturnsPersistedShipment() throws Exception {
         Shipment shipment = buildShipment(UUID.randomUUID(), UUID.randomUUID());
         shipmentRepository.save(shipment);
@@ -51,6 +52,7 @@ class ShippingControllerIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void getByOrderReturnsFirstShipmentForOrder() throws Exception {
         UUID orderId = UUID.randomUUID();
         Shipment first = buildShipment(UUID.randomUUID(), orderId);
@@ -65,6 +67,7 @@ class ShippingControllerIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void getByIdReturnsNotFoundWhenMissing() throws Exception {
         mockMvc.perform(get("/api/shipping/" + UUID.randomUUID()).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());

@@ -3,6 +3,7 @@ package controller;
 import domain.Shipment;
 import repo.ShipmentRepository;
 import java.util.UUID;
+import org.springframework.lang.NonNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,14 +18,14 @@ public class ShippingController {
     }
 
     @GetMapping("/{shippingId}")
-    public ResponseEntity<Shipment> getById(@PathVariable UUID shippingId) {
+    public ResponseEntity<Shipment> getById(@PathVariable @NonNull UUID shippingId) {
         return repo.findById(shippingId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/by-order/{orderId}")
-    public ResponseEntity<Shipment> getByOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<Shipment> getByOrder(@PathVariable @NonNull UUID orderId) {
         return repo.findFirstByOrderId(orderId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
