@@ -3,12 +3,11 @@ package catalog.repository;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 import catalog.domain.Product;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -25,23 +24,25 @@ public class PostgresCatalogRepository implements CatalogRepository {
         this.jdbc = jdbc;
     }
 
-    private static final RowMapper<Product> PRODUCT_ROW_MAPPER = new RowMapper<>() {
-        @Override
-        public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
-            var p = new Product();
-            p.setId((UUID) rs.getObject("id"));
-            p.setSku(rs.getString("sku"));
-            p.setName(rs.getString("name"));
-            p.setDescription(rs.getString("description"));
-            p.setPrice(rs.getBigDecimal("price").doubleValue());
-            p.setCurrency(rs.getString("currency"));
-            p.setActive(rs.getBoolean("active"));
+    @NonNull
+    private static final RowMapper<Product> PRODUCT_ROW_MAPPER = (rs, rowNum) -> {
+        var p = new Product();
+        Object idObj = rs.getObject("id");
+        p.setId(idObj != null ? (UUID) idObj : null);
+        p.setSku(rs.getString("sku"));
+        p.setName(rs.getString("name"));
+        p.setDescription(rs.getString("description"));
+        var priceDecimal = rs.getBigDecimal("price");
+        p.setPrice(priceDecimal != null ? priceDecimal.doubleValue() : 0.0);
+        p.setCurrency(rs.getString("currency"));
+        p.setActive(rs.getBoolean("active"));
 
-            // TIMESTAMPTZ -> Instant
-            p.setCreatedAt(rs.getTimestamp("created_at").toInstant());
-            p.setUpdatedAt(rs.getTimestamp("updated_at").toInstant());
-            return p;
-        }
+        // TIMESTAMPTZ -> Instant (with null safety)
+        Timestamp createdTs = rs.getTimestamp("created_at");
+        Timestamp updatedTs = rs.getTimestamp("updated_at");
+        p.setCreatedAt(createdTs != null ? createdTs.toInstant() : null);
+        p.setUpdatedAt(updatedTs != null ? updatedTs.toInstant() : null);
+        return p;
     };
 
     @Override

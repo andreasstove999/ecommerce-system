@@ -34,10 +34,11 @@ class SequenceServiceTest {
         sequenceCaptor = ArgumentCaptor.forClass(EventSequence.class);
     }
 
+    @SuppressWarnings("null")
     @Test
     void nextCreatesNewSequenceWhenMissing() {
         when(repo.findByPartitionKey("orders-1")).thenReturn(Optional.empty());
-        when(repo.save(any(EventSequence.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repo.save(any(EventSequence.class))).thenAnswer(invocation -> (EventSequence) invocation.getArgument(0));
 
         long next = sequenceService.next("orders-1");
 
@@ -48,6 +49,7 @@ class SequenceServiceTest {
         assertThat(saved.nextSequence).isEqualTo(2L);
     }
 
+    @SuppressWarnings("null")
     @Test
     void nextIncrementsExistingSequence() {
         EventSequence existing = new EventSequence();
@@ -55,7 +57,7 @@ class SequenceServiceTest {
         existing.nextSequence = 5L;
 
         when(repo.findByPartitionKey(existing.partitionKey)).thenReturn(Optional.of(existing));
-        when(repo.save(any(EventSequence.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repo.save(any(EventSequence.class))).thenAnswer(invocation -> (EventSequence) invocation.getArgument(0));
 
         long next = sequenceService.next(existing.partitionKey);
 

@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CatalogServiceIT {
 
     @Container
+    @SuppressWarnings("resource") // Testcontainers manages lifecycle automatically
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("catalog_db")
             .withUsername("catalog_user")
