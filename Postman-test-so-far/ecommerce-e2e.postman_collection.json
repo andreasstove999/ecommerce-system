@@ -148,7 +148,7 @@
                     ]
                 },
                 {
-                    "name": "Shipping Health (TODO) - no health endpoint",
+                    "name": "Shipping - Health",
                     "request": {
                         "method": "GET",
                         "header": [],
@@ -168,7 +168,9 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "pm.test('health may be missing', function(){ pm.expect([200,404]).to.include(pm.response.code); });"
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('status ok', ()=> pm.expect(pm.response.json().status).to.eql('ok'));",
+                                    "pm.test('service is shipping-service', ()=> pm.expect(pm.response.json().service).to.eql('shipping-service'));"
                                 ]
                             }
                         }

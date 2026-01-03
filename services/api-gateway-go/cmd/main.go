@@ -47,7 +47,7 @@ func main() {
 		{Name: "inventory-service", Client: inventoryBase, Path: "/health"},
 		{Name: "catalog-service", Client: catalogBase, Path: "/api/catalog/health"},
 		{Name: "payment-service", Client: paymentBase, Path: "/health"},
-		// shipping-service health endpoint is not implemented
+		{Name: "shipping-service", Client: shippingBase, Path: "/health"},
 	}
 
 	router := httpapi.NewRouter(httpapi.Deps{
