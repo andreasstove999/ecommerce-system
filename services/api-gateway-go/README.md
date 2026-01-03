@@ -86,3 +86,10 @@ From the repo’s docker folder:
 
 ```bash
 docker compose up --build
+
+## Tests
+
+- Unit tests: `go test ./...`
+- Integration tests (requires stack running): `go test -tags=integration ./...`
+- Start integration stack: `docker compose -f ../docker/docker-compose.yml up --build -d`
+  (same stack used for local development)
