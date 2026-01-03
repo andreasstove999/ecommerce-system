@@ -1,0 +1,642 @@
+{
+  "info": {
+    "_postman_id": "cf5e6efc-c6f3-45c1-9309-c7e2b49042f9",
+    "name": "Ecommerce BFF E2E (Gateway)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "BFF-style API Gateway collection. Uses X-User-Id header for /me/* routes. URLs are stored as strings for UI compatibility."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Gateway Health - GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upstreams Health - GET /health/upstreams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/health/upstreams"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "E2E Happy Path",
+      "item": [
+        {
+          "name": "Init Run (generate userId)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const newUser = `u-${pm.variables.replaceIn('{{$guid}}')}`;",
+                  "pm.environment.set('userId', newUser);",
+                  "pm.environment.unset('orderId');",
+                  "pm.environment.unset('cartId');",
+                  "pm.environment.unset('paymentId');",
+                  "pm.environment.unset('shipmentId');",
+                  "pm.environment.set('pollTry','0');",
+                  "pm.environment.set('inventoryPollTry','0');",
+                  "pm.environment.set('paymentPollTry','0');",
+                  "pm.environment.set('shippingPollTry','0');",
+                  "pm.test('userId initialized', ()=> pm.expect(pm.environment.get('userId')).to.match(/^u-/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Product - POST /products",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"sku-{{$timestamp}}\",\n  \"name\": \"Test Product {{$timestamp}}\",\n  \"description\": \"generated via postman\",\n  \"price\": 100,\n  \"currency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = pm.response.json();",
+                  "pm.test('status 201', ()=> pm.response.to.have.status(201));",
+                  "pm.environment.set('productId', body.id);",
+                  "pm.environment.set('price', body.price);",
+                  "pm.test('productId captured', ()=> pm.expect(pm.environment.get('productId')).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory Seed Stock - POST /inventory/adjust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/inventory/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"available\": {{initialStock}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "pm.test('seed ok flag', ()=> { const json = pm.response.json(); pm.expect(json.ok).to.be.true;});",
+                  "const expected = parseInt(pm.environment.get('initialStock')||'0',10);",
+                  "pm.environment.set('expectedStockAfter', String(expected - parseInt(pm.environment.get('quantity')||'0',10)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cart AddItem - POST /me/cart/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/cart/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": {{quantity}},\n  \"price\": {{price}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if(json.cartId){ pm.environment.set('cartId', json.cartId);}",
+                  "pm.test('cart captured', ()=> pm.expect(pm.environment.get('cartId') || json.cartId).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cart Checkout - POST /me/cart/checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/cart/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "pm.test('checkout status', ()=> { const json = pm.response.json(); pm.expect(json.status).to.exist;});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll Orders Until Created",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let currentTry = parseInt(pm.environment.get('pollTry')||'0',10);",
+                  "const maxTry = parseInt(pm.environment.get('pollMax')||'12',10);",
+                  "let orders = [];",
+                  "try { orders = pm.response.json(); } catch(e) { orders = []; }",
+                  "const found = Array.isArray(orders) && orders.length > 0;",
+                  "if(found){ pm.environment.set('orderId', orders[0].orderId || orders[0].id); pm.environment.set('pollTry','0'); }",
+                  "if(!found && currentTry < maxTry){ pm.environment.set('pollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Orders Until Created'); }",
+                  "pm.test('order created or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll Payment Until Recorded",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/orders/{{orderId}}/payment"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let currentTry = parseInt(pm.environment.get('paymentPollTry')||'0',10);",
+                  "const maxTry = parseInt(pm.environment.get('paymentPollMax')||'12',10);",
+                  "let json={}; try { json = pm.response.json(); } catch(e){}",
+                  "const found = pm.response.code === 200 && (json.id !== undefined || json.paymentId !== undefined);",
+                  "if(found){ pm.environment.set('paymentId', json.id || json.paymentId); pm.environment.set('paymentPollTry','0'); }",
+                  "if(!found && currentTry < maxTry){ pm.environment.set('paymentPollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Payment Until Recorded'); }",
+                  "pm.test('payment located or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll Shipping Until Ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/orders/{{orderId}}/shipping"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let currentTry = parseInt(pm.environment.get('shippingPollTry')||'0',10);",
+                  "const maxTry = parseInt(pm.environment.get('shippingPollMax')||'12',10);",
+                  "let json={}; try { json = pm.response.json(); } catch(e){}",
+                  "const found = pm.response.code === 200 && (json.id !== undefined || json.shippingId !== undefined);",
+                  "if(found){ pm.environment.set('shipmentId', json.id || json.shippingId); pm.environment.set('shippingPollTry','0'); }",
+                  "if(!found && currentTry < maxTry){ pm.environment.set('shippingPollTry', String(currentTry+1)); postman.setNextRequest('E2E Happy Path / Poll Shipping Until Ready'); }",
+                  "pm.test('shipment located or retrying', ()=> pm.expect(found || currentTry < maxTry).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart (me)",
+      "item": [
+        {
+          "name": "Add Item - POST /me/cart/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/cart/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": {{quantity}},\n  \"price\": {{price}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if(json.cartId){ pm.environment.set('cartId', json.cartId); }",
+                  "pm.test('cartId captured', ()=> pm.expect(pm.environment.get('cartId') || json.cartId).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Cart - GET /me/cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/cart"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout - POST /me/cart/checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/cart/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('checkout status exists', ()=> pm.expect(json.status).to.exist);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List My Orders - GET /me/orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{userId}}"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/me/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Order - GET /orders/{orderId}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/orders/{{orderId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if(json.userId){ pm.test('matches user', ()=> pm.expect(json.userId).to.eql(pm.environment.get('userId'))); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products - GET /products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Product - GET /products/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Product - POST /products",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"sku-{{$timestamp}}\",\n  \"name\": \"Test Product {{$timestamp}}\",\n  \"description\": \"generated via postman\",\n  \"price\": 100,\n  \"currency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', ()=> pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('productId', body.id);",
+                  "if(body.price !== undefined){ pm.environment.set('price', body.price); }",
+                  "pm.test('productId captured', ()=> pm.expect(pm.environment.get('productId')).to.exist);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Seed Stock - POST /inventory/adjust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gatewayBaseUrl}}/inventory/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"available\": {{initialStock}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('seed ok flag', ()=> pm.expect(json.ok).to.be.true);",
+                  "const expected = parseInt(pm.environment.get('initialStock')||'0',10);",
+                  "pm.environment.set('expectedStockAfter', String(expected - parseInt(pm.environment.get('quantity')||'0',10)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Availability - GET /products/{id}/availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/products/{{productId}}/availability"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('has available', ()=> pm.expect(json.available).to.be.a('number'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Get Payment By Order - GET /orders/{orderId}/payment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/orders/{{orderId}}/payment"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404 while pending', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shipping",
+      "item": [
+        {
+          "name": "Get Shipping By Order - GET /orders/{orderId}/shipping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayBaseUrl}}/orders/{{orderId}}/shipping"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404 while pending', ()=> pm.expect([200,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
