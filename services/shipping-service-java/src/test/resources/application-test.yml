@@ -15,6 +15,11 @@ spring:
     port: 5672
     username: guest
     password: guest
+    listener:
+      simple:
+        auto-startup: false
+      direct:
+        auto-startup: false
 
 logging:
   level:
