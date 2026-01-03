@@ -41,7 +41,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status 200', ()=> pm.response.to.have.status(200));"
+                  "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                  "const upstreams = pm.response.json().upstream || [];",
+                  "const shipping = upstreams.find(u => u.name === 'shipping-service');",
+                  "pm.test('shipping health is included', ()=> pm.expect(shipping).to.exist);",
+                  "pm.test('shipping health ok', ()=> pm.expect(shipping.ok).to.be.true);"
                 ]
               }
             }

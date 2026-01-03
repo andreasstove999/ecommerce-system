@@ -102,6 +102,9 @@ This starts:
 | shipping-service-java | Java | Shipping request creation |
 | payment-service-dotnet | .NET | Payment workflow (success/failure) |
 
+Shipping service liveness endpoint: `GET http://localhost:8087/health`.
+API Gateway upstream probe (includes shipping): `GET http://localhost:8080/health/upstreams`.
+
 ---
 
 # 🔷 Event Consumers

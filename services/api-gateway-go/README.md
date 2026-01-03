@@ -19,7 +19,7 @@ It exposes **BFF-style endpoints** (product/user-centric) and forwards requests 
 
 ### Health
 - `GET /health` — gateway health
-- `GET /health/upstreams` — calls upstream services’ health endpoints
+- `GET /health/upstreams` — calls upstream services’ health endpoints (cart, order, inventory, catalog, payment, shipping)
 
 ### Cart (current user)
 > Requires header `X-User-Id`
