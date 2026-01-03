@@ -41,7 +41,7 @@ func writeCORSHeaders(w http.ResponseWriter, origin string, allowOrigins []strin
 
 	w.Header().Set("Vary", "Origin")
 	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-Id")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-Id, X-User-Id")
 }
 
 func originAllowed(origin string, allow []string) bool {

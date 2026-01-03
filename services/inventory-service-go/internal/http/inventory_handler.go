@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/andreasstove999/ecommerce-system/services/inventory-service-go/internal/inventory"
 	"github.com/go-chi/chi/v5"
@@ -38,8 +39,31 @@ func (h *Handler) GetAvailability(w http.ResponseWriter, r *http.Request) {
 }
 
 type adjustRequest struct {
-	ProductID string `json:"productId"`
-	Available int    `json:"available"`
+	ProductID string         `json:"productId"`
+	Available availableValue `json:"available"`
+}
+
+type availableValue int
+
+func (a *availableValue) UnmarshalJSON(data []byte) error {
+	var n int
+	if err := json.Unmarshal(data, &n); err == nil {
+		*a = availableValue(n)
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	parsed, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+
+	*a = availableValue(parsed)
+	return nil
 }
 
 func (h *Handler) AdjustAvailability(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +79,7 @@ func (h *Handler) AdjustAvailability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.SetAvailable(r.Context(), req.ProductID, req.Available); err != nil {
+	if err := h.repo.SetAvailable(r.Context(), req.ProductID, int(req.Available)); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
