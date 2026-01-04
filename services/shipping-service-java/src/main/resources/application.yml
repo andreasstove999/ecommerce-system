@@ -10,9 +10,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://shipping-db:5432/shipping_db}
     username: ${SPRING_DATASOURCE_USERNAME:shipping_user}
     password: ${SPRING_DATASOURCE_PASSWORD:shipping_pass}
+  flyway:
+    enabled: true
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         jdbc:
