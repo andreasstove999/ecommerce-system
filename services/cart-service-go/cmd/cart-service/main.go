@@ -15,6 +15,13 @@ import (
 func main() {
 	port := getEnv("PORT", "8081") // cart can use 8081
 
+	logger := log.New(os.Stdout, "[cart-service] ", log.LstdFlags|log.Lshortfile)
+
+	dsn := db.GetDSN()
+	if err := db.RunMigrations(dsn, logger); err != nil {
+		logger.Fatalf("run migrations: %v", err)
+	}
+
 	// Open DB and create repository
 	database := db.MustOpen()
 	defer database.Close()
@@ -26,7 +33,7 @@ func main() {
 	sequenceRepo := events.NewSequenceRepository(database)
 	cartPublisher, err := events.NewRabbitCartEventsPublisher(rabbitConn, sequenceRepo)
 	if err != nil {
-		log.Fatalf("failed to create cart publisher: %v", err)
+		logger.Fatalf("failed to create cart publisher: %v", err)
 	}
 
 	mux := httpserver.NewRouter(cartRepo, cartPublisher)
@@ -38,10 +45,10 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Printf("cart-service listening on :%s", port)
+	logger.Printf("cart-service listening on :%s", port)
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("server error: %v", err)
+		logger.Fatalf("server error: %v", err)
 	}
 }
 

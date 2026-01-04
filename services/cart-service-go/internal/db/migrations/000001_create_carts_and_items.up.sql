@@ -1,4 +1,3 @@
--- Cart Service schema (reference)
 CREATE TABLE IF NOT EXISTS carts (
     id         UUID PRIMARY KEY,
     user_id    TEXT NOT NULL UNIQUE,
@@ -12,10 +11,4 @@ CREATE TABLE IF NOT EXISTS cart_items (
     product_id TEXT NOT NULL,
     quantity   INT NOT NULL,
     price      NUMERIC(12,2) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS event_sequences (
-    partition_key TEXT PRIMARY KEY,
-    last_sequence BIGINT NOT NULL,
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
