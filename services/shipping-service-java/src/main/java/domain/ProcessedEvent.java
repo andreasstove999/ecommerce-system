@@ -9,11 +9,12 @@ import java.util.UUID;
 public class ProcessedEvent {
 
     @Id
+    @Column(name = "event_id", nullable = false)
     public UUID eventId;
 
-    @Column(nullable = false)
+    @Column(name = "event_name", nullable = false)
     public String eventName;
 
-    @Column(nullable = false)
+    @Column(name = "processed_at", nullable = false)
     public OffsetDateTime processedAt;
 }
