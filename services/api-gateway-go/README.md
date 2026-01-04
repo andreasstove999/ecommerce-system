@@ -4,6 +4,13 @@ This service is the **single HTTP entry-point** for the frontend and Postman flo
 
 It exposes **BFF-style endpoints** (product/user-centric) and forwards requests to internal services using **HTTP clients** (no reverse proxy). The gateway is **stateless** and contains **no domain logic**.
 
+## Frontend contract
+
+- OpenAPI source of truth: `contracts/http/bff/v1/openapi.yaml`
+- Gateway DTOs (mirror the OpenAPI): `services/api-gateway-go/internal/http/dto`
+
+OpenAPI is the canonical contract; DTOs should reflect it.
+
 ## Responsibilities
 
 - Provide a stable public API for clients (React / Postman)
