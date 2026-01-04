@@ -53,11 +53,11 @@ func main() {
 	defer pub.Close()
 
 	// Create and configure consumer with all handlers
-	consumer := eventserver.NewConsumer(rabbitConn, logger)
-	consumer.Register(eventserver.QueueCartCheckedOut, eventserver.CartCheckedOutHandler(database, orderRepo, dedupRepo, pub, logger, consumeEnveloped))
-	consumer.Register(eventserver.QueuePaymentSucceeded, eventserver.PaymentSucceededHandler(orderRepo, pub, logger))
-	consumer.Register(eventserver.QueuePaymentFailed, eventserver.PaymentFailedHandler(orderRepo, logger))
-	consumer.Register(eventserver.QueueStockReserved, eventserver.StockReservedHandler(orderRepo, pub, logger))
+        consumer := eventserver.NewConsumer(rabbitConn, logger)
+        consumer.Register(eventserver.RoutingCartCheckedOut, eventserver.CartCheckedOutHandler(database, orderRepo, dedupRepo, pub, logger, consumeEnveloped))
+        consumer.Register(eventserver.RoutingPaymentSucceeded, eventserver.PaymentSucceededHandler(orderRepo, pub, logger))
+        consumer.Register(eventserver.RoutingPaymentFailed, eventserver.PaymentFailedHandler(orderRepo, logger))
+        consumer.Register(eventserver.RoutingStockReserved, eventserver.StockReservedHandler(orderRepo, pub, logger))
 
 	if err := consumer.Start(ctx); err != nil {
 		logger.Fatalf("start consumer: %v", err)

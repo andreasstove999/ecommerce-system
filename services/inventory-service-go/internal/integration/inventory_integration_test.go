@@ -234,8 +234,7 @@ func publishOrderCreated(ctx context.Context, t *testing.T, conn *amqp.Connectio
 	require.NoError(t, err)
 	defer ch.Close()
 
-	_, err = ch.QueueDeclare(events.QueueOrderCreated, true, false, false, false, nil)
-	require.NoError(t, err)
+	require.NoError(t, ch.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil))
 
 	body, err := json.Marshal(order)
 	require.NoError(t, err)
@@ -243,7 +242,7 @@ func publishOrderCreated(ctx context.Context, t *testing.T, conn *amqp.Connectio
 	pubCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err = ch.PublishWithContext(pubCtx, "", events.QueueOrderCreated, false, false, amqp.Publishing{
+	err = ch.PublishWithContext(pubCtx, events.EventsExchange, events.OrderCreatedRoutingKey, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Body:         body,
@@ -255,7 +254,7 @@ func waitForStockReserved(ctx context.Context, t *testing.T, conn *amqp.Connecti
 	t.Helper()
 
 	var ev events.StockReservedEvent
-	waitForMessage(ctx, t, conn, events.StockReservedQueue, &ev)
+	waitForMessage(ctx, t, conn, events.StockReservedRoutingKey, &ev)
 	return ev
 }
 
@@ -263,19 +262,22 @@ func waitForStockDepleted(ctx context.Context, t *testing.T, conn *amqp.Connecti
 	t.Helper()
 
 	var ev events.StockDepletedEvent
-	waitForMessage(ctx, t, conn, events.StockDepletedQueue, &ev)
+	waitForMessage(ctx, t, conn, events.StockDepletedRoutingKey, &ev)
 	return ev
 }
 
-func waitForMessage[T any](ctx context.Context, t *testing.T, conn *amqp.Connection, queue string, dest *T) {
+func waitForMessage[T any](ctx context.Context, t *testing.T, conn *amqp.Connection, routingKey string, dest *T) {
 	t.Helper()
 
 	ch, err := conn.Channel()
 	require.NoError(t, err)
 	defer ch.Close()
 
-	_, err = ch.QueueDeclare(queue, true, false, false, false, nil)
+	require.NoError(t, ch.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil))
+
+	q, err := ch.QueueDeclare("", false, true, true, false, nil)
 	require.NoError(t, err)
+	require.NoError(t, ch.QueueBind(q.Name, routingKey, events.EventsExchange, false, nil))
 
 	pollCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
@@ -284,11 +286,11 @@ func waitForMessage[T any](ctx context.Context, t *testing.T, conn *amqp.Connect
 	for {
 		select {
 		case <-pollCtx.Done():
-			t.Fatalf("timed out waiting for message on %s: %v", queue, pollCtx.Err())
+			t.Fatalf("timed out waiting for message on %s: %v", routingKey, pollCtx.Err())
 		default:
 		}
 
-		msg, ok, getErr := ch.Get(queue, true)
+		msg, ok, getErr := ch.Get(q.Name, true)
 		require.NoError(t, getErr)
 		if ok {
 			require.NoError(t, json.Unmarshal(msg.Body, dest))

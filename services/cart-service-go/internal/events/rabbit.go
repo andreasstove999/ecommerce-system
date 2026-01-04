@@ -14,8 +14,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const cartCheckedOutQueue = "cart.checkedout"
-
 type SequenceRepository interface {
 	NextSequence(ctx context.Context, partitionKey string) (int64, error)
 }
@@ -32,16 +30,8 @@ func NewRabbitCartEventsPublisher(conn *amqp.Connection, sequenceRepo SequenceRe
 		return nil, fmt.Errorf("failed to open a channel: %v", err)
 	}
 
-	_, err = ch.QueueDeclare(
-		cartCheckedOutQueue,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to declare queue: %v", err)
+	if err := declareEventsExchange(ch); err != nil {
+		return nil, fmt.Errorf("failed to declare exchange: %v", err)
 	}
 
 	publishEnveloped := true
@@ -104,7 +94,7 @@ func (p *RabbitCartEventsPublisher) publishLegacyEvent(ctx context.Context, c *c
 		DeliveryMode: amqp.Persistent,
 	}
 
-	if err := p.ch.PublishWithContext(ctx, "", cartCheckedOutQueue, false, false, pub); err != nil {
+	if err := p.ch.PublishWithContext(ctx, EventsExchange, CartCheckedOutRoutingKey, false, false, pub); err != nil {
 		return fmt.Errorf("publish legacy: %w", err)
 	}
 
@@ -146,7 +136,7 @@ func (p *RabbitCartEventsPublisher) publishEnvelopedEvent(ctx context.Context, c
 		DeliveryMode: amqp.Persistent,
 	}
 
-	if err := p.ch.PublishWithContext(ctx, "", cartCheckedOutQueue, false, false, pub); err != nil {
+	if err := p.ch.PublishWithContext(ctx, EventsExchange, CartCheckedOutRoutingKey, false, false, pub); err != nil {
 		return fmt.Errorf("publish enveloped: %w", err)
 	}
 

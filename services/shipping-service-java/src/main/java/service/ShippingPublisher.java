@@ -35,7 +35,6 @@ public class ShippingPublisher {
         env.schema = "contracts/events/shipping/ShippingCreated.v1.payload.schema.json";
         env.payload = payload;
 
-        // default exchange, routing key = queue name (matches your Go services)
-        rabbit.convertAndSend("", RabbitConfig.SHIPPING_CREATED_QUEUE, env);
+        rabbit.convertAndSend(RabbitConfig.EVENTS_EXCHANGE, RabbitConfig.SHIPPING_CREATED_ROUTING_KEY, env);
     }
 }

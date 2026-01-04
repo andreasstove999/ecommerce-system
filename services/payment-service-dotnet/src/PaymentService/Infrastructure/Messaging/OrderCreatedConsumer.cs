@@ -39,15 +39,10 @@ public sealed class OrderCreatedConsumer : BackgroundService
 
         try
         {
-            var usingCustomExchange = !string.IsNullOrWhiteSpace(_opt.Exchange);
-
             await channel.QueueDeclareAsync(_opt.Queue, durable: true, exclusive: false, autoDelete: false);
 
-            if (usingCustomExchange)
-            {
-                await channel.ExchangeDeclareAsync(_opt.Exchange, ExchangeType.Topic, durable: true);
-                await channel.QueueBindAsync(_opt.Queue, _opt.Exchange, _opt.RoutingKeyOrderCreated);
-            }
+            await channel.ExchangeDeclareAsync(_opt.Exchange, ExchangeType.Topic, durable: true);
+            await channel.QueueBindAsync(_opt.Queue, _opt.Exchange, _opt.RoutingKeyOrderCreated);
 
             await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false);
 
@@ -135,7 +130,7 @@ public sealed class OrderCreatedConsumer : BackgroundService
                     Provider = payment.Provider
                 });
 
-            _publisher.Publish("PaymentSucceeded.v1", succeeded);
+            _publisher.Publish("payment.succeeded.v1", succeeded);
         }
         else
         {
@@ -151,7 +146,7 @@ public sealed class OrderCreatedConsumer : BackgroundService
                     Reason = reason ?? "Unknown"
                 });
 
-            _publisher.Publish("PaymentFailed.v1", failed);
+            _publisher.Publish("payment.failed.v1", failed);
         }
     }
 

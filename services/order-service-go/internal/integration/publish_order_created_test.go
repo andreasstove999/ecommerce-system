@@ -40,7 +40,7 @@ func TestCartCheckedOutConsumer_PublishesOrderCreated(t *testing.T) {
 	t.Cleanup(cancel)
 
 	consumer := events.NewConsumer(conn, logger)
-	consumer.Register(events.QueueCartCheckedOut, events.CartCheckedOutHandler(db, repo, dedupRepo, publisher, logger, true))
+	consumer.Register(events.RoutingCartCheckedOut, events.CartCheckedOutHandler(db, repo, dedupRepo, publisher, logger, true))
 
 	require.NoError(t, consumer.Start(ctx))
 
@@ -50,18 +50,22 @@ func TestCartCheckedOutConsumer_PublishesOrderCreated(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = consumeCh.Close() })
 
-	_, err = consumeCh.QueueDeclare(
-		events.OrderCreatedQueue,
-		true,  // durable
-		false, // autoDelete
-		false, // exclusive
-		false, // noWait
-		nil,   // args
+	require.NoError(t, consumeCh.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil))
+
+	q, err := consumeCh.QueueDeclare(
+		"",
+		false,
+		true,
+		true,
+		false,
+		nil,
 	)
 	require.NoError(t, err)
 
+	require.NoError(t, consumeCh.QueueBind(q.Name, events.OrderCreatedRoutingKey, events.EventsExchange, false, nil))
+
 	msgs, err := consumeCh.Consume(
-		events.OrderCreatedQueue,
+		q.Name,
 		"integration-order-created",
 		true,  // autoAck
 		false, // exclusive
@@ -96,16 +100,6 @@ func TestCartCheckedOutConsumer_PublishesOrderCreated(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = publishCh.Close() })
 
-	_, err = publishCh.QueueDeclare(
-		events.QueueCartCheckedOut,
-		true,  // durable
-		false, // autoDelete
-		false, // exclusive
-		false, // noWait
-		nil,   // args
-	)
-	require.NoError(t, err)
-
 	payload := events.CartCheckedOutPayload{
 		CartID: "cart-200",
 		UserID: "user-200",
@@ -133,10 +127,13 @@ func TestCartCheckedOutConsumer_PublishesOrderCreated(t *testing.T) {
 	body, err := json.Marshal(event)
 	require.NoError(t, err)
 
+	err = publishCh.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil)
+	require.NoError(t, err)
+
 	err = publishCh.PublishWithContext(
 		ctx,
-		"",
-		events.QueueCartCheckedOut,
+		events.EventsExchange,
+		events.CartCheckedOutRoutingKey,
 		false,
 		false,
 		amqp.Publishing{

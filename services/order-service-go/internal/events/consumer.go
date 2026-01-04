@@ -34,10 +34,16 @@ func MustDialRabbit() *amqp.Connection {
 type HandlerFunc func(ctx context.Context, body []byte) error
 
 // Consumer manages multiple queue subscriptions with registered handlers.
+type subscription struct {
+	queue      string
+	routingKey string
+	handler    HandlerFunc
+}
+
 type Consumer struct {
 	conn   *amqp.Connection
 	logger *log.Logger
-	queues map[string]HandlerFunc
+	queues map[string]subscription
 	dlqCh  *amqp.Channel // channel for publishing to dead letter queue
 	mu     sync.RWMutex
 }
@@ -66,17 +72,18 @@ func NewConsumer(conn *amqp.Connection, logger *log.Logger) *Consumer {
 	return &Consumer{
 		conn:   conn,
 		logger: logger,
-		queues: make(map[string]HandlerFunc),
+		queues: make(map[string]subscription),
 		dlqCh:  dlqCh,
 	}
 }
 
-// Register associates a queue name with a handler function.
+// Register associates a routing key with a handler function using the service-owned queue name.
 // Must be called before Start.
-func (c *Consumer) Register(queue string, handler HandlerFunc) {
+func (c *Consumer) Register(routingKey string, handler HandlerFunc) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.queues[queue] = handler
+	queue := orderQueueName(routingKey)
+	c.queues[queue] = subscription{queue: queue, routingKey: routingKey, handler: handler}
 }
 
 // Start declares all registered queues and starts a consumer goroutine for each.
@@ -85,8 +92,8 @@ func (c *Consumer) Start(ctx context.Context) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for queue, handler := range c.queues {
-		if err := c.startQueueConsumer(ctx, queue, handler); err != nil {
+	for queue, sub := range c.queues {
+		if err := c.startQueueConsumer(ctx, sub); err != nil {
 			return fmt.Errorf("start consumer for %s: %w", queue, err)
 		}
 		c.logger.Printf("started consumer for queue: %s", queue)
@@ -96,12 +103,18 @@ func (c *Consumer) Start(ctx context.Context) error {
 }
 
 // startQueueConsumer creates a channel, declares the queue, and starts consuming.
-func (c *Consumer) startQueueConsumer(ctx context.Context, queue string, handler HandlerFunc) error {
+func (c *Consumer) startQueueConsumer(ctx context.Context, sub subscription) error {
 	ch, err := c.conn.Channel()
 	if err != nil {
 		return fmt.Errorf("open channel: %w", err)
 	}
 
+	if err := declareEventsExchange(ch); err != nil {
+		_ = ch.Close()
+		return fmt.Errorf("declare exchange: %w", err)
+	}
+
+	queue := sub.queue
 	_, err = ch.QueueDeclare(
 		queue,
 		true,  // durable
@@ -113,6 +126,11 @@ func (c *Consumer) startQueueConsumer(ctx context.Context, queue string, handler
 	if err != nil {
 		_ = ch.Close()
 		return fmt.Errorf("declare queue %s: %w", queue, err)
+	}
+
+	if err := ch.QueueBind(queue, sub.routingKey, EventsExchange, false, nil); err != nil {
+		_ = ch.Close()
+		return fmt.Errorf("bind queue %s: %w", queue, err)
 	}
 
 	msgs, err := ch.Consume(
@@ -129,7 +147,7 @@ func (c *Consumer) startQueueConsumer(ctx context.Context, queue string, handler
 		return fmt.Errorf("consume %s: %w", queue, err)
 	}
 
-	go c.consumeLoop(ctx, ch, queue, msgs, handler)
+	go c.consumeLoop(ctx, ch, queue, msgs, sub.handler)
 
 	return nil
 }
@@ -221,7 +239,7 @@ func StartCartCheckedOutConsumer(
 	}
 
 	consumer := NewConsumer(conn, logger)
-	consumer.Register(QueueCartCheckedOut, CartCheckedOutHandler(db, repo, dedupRepo, pub, logger, consumeEnveloped))
+	consumer.Register(RoutingCartCheckedOut, CartCheckedOutHandler(db, repo, dedupRepo, pub, logger, consumeEnveloped))
 
 	if err := consumer.Start(ctx); err != nil {
 		_ = pub.Close()
