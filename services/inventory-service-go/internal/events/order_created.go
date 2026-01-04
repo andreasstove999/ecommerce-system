@@ -8,7 +8,7 @@ import (
 
 const (
 	// QueueOrderCreated is published by order-service-go Publisher.PublishOrderCreated.
-	QueueOrderCreated = "order.created"
+	QueueOrderCreated = OrderCreatedRoutingKey
 
 	EventTypeOrderCreated = "OrderCreated"
 )

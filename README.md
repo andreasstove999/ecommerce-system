@@ -121,6 +121,14 @@ This starts:
 
 ---
 
+# 🔷 Messaging topology
+
+All services publish domain events to the durable topic exchange `ecommerce.events` using versioned routing keys (for example `order.created.v1`).
+Each consumer owns its own queue following the `<service>.<routingKey>` convention to avoid cross-service conflicts and enable fan-out delivery.
+See [docs/messaging-topology.md](docs/messaging-topology.md) for full bindings per service.
+
+---
+
 # 🔷 Testing
 
 A Postman collection is available under `postman/ecommerce-collection.json`.

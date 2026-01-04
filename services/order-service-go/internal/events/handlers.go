@@ -13,12 +13,12 @@ import (
 	"github.com/andreasstove999/ecommerce-system/order-service-go/internal/order"
 )
 
-// Queue names as constants for handler registration
+// Routing keys as constants for handler registration
 const (
-	QueueCartCheckedOut   = "cart.checkedout"
-	QueuePaymentSucceeded = "payment.succeeded"
-	QueuePaymentFailed    = "payment.failed"
-	QueueStockReserved    = "stock.reserved"
+	RoutingCartCheckedOut   = CartCheckedOutRoutingKey
+	RoutingPaymentSucceeded = PaymentSucceededRoutingKey
+	RoutingPaymentFailed    = PaymentFailedRoutingKey
+	RoutingStockReserved    = StockReservedRoutingKey
 
 	consumerNameCartCheckedOut = "order-service.cart-checkedout"
 )

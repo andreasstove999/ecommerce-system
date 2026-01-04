@@ -36,7 +36,7 @@ func TestInventoryComposeFlow(t *testing.T) {
 	require.NoError(t, err)
 	defer ch.Close()
 
-	purgeQueues(t, ch, events.StockReservedQueue, events.StockDepletedQueue)
+	require.NoError(t, ch.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil))
 
 	productA := "product-A"
 	productB := "product-B"
@@ -48,7 +48,7 @@ func TestInventoryComposeFlow(t *testing.T) {
 		{ProductID: productA, Quantity: 2},
 	}, 1))
 
-	reserved := waitForQueueMessage[events.StockReservedEvent](ctx, t, ch, events.StockReservedQueue)
+	reserved := waitForQueueMessage[events.StockReservedEvent](ctx, t, ch, events.StockReservedRoutingKey)
 	require.Equal(t, orderID1, reserved.Payload.OrderID)
 	require.Len(t, reserved.Payload.Items, 1)
 	require.Equal(t, productA, reserved.Payload.Items[0].ProductID)
@@ -63,7 +63,7 @@ func TestInventoryComposeFlow(t *testing.T) {
 		{ProductID: productB, Quantity: 2},
 	}, 2))
 
-	depleted := waitForQueueMessage[events.StockDepletedEvent](ctx, t, ch, events.StockDepletedQueue)
+	depleted := waitForQueueMessage[events.StockDepletedEvent](ctx, t, ch, events.StockDepletedRoutingKey)
 	require.Equal(t, orderID2, depleted.Payload.OrderID)
 	require.Len(t, depleted.Payload.Depleted, 1)
 	require.Equal(t, productB, depleted.Payload.Depleted[0].ProductID)
@@ -97,27 +97,25 @@ func composeSeedStock(ctx context.Context, t *testing.T, client *http.Client, pr
 func publishOrderCreatedMessage(ctx context.Context, t *testing.T, ch *amqp.Channel, order events.EnvelopedOrderCreated) {
 	t.Helper()
 
-	_, err := ch.QueueDeclare(events.QueueOrderCreated, true, false, false, false, nil)
-	require.NoError(t, err)
-
 	body, err := json.Marshal(order)
 	require.NoError(t, err)
 
 	pubCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	require.NoError(t, ch.PublishWithContext(pubCtx, "", events.QueueOrderCreated, false, false, amqp.Publishing{
+	require.NoError(t, ch.PublishWithContext(pubCtx, events.EventsExchange, events.OrderCreatedRoutingKey, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Body:         body,
 	}))
 }
 
-func waitForQueueMessage[T any](ctx context.Context, t *testing.T, ch *amqp.Channel, queue string) T {
+func waitForQueueMessage[T any](ctx context.Context, t *testing.T, ch *amqp.Channel, routingKey string) T {
 	t.Helper()
 
-	_, err := ch.QueueDeclare(queue, true, false, false, false, nil)
+	q, err := ch.QueueDeclare("", false, true, true, false, nil)
 	require.NoError(t, err)
+	require.NoError(t, ch.QueueBind(q.Name, routingKey, events.EventsExchange, false, nil))
 
 	var out T
 	pollCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
@@ -127,11 +125,11 @@ func waitForQueueMessage[T any](ctx context.Context, t *testing.T, ch *amqp.Chan
 	for {
 		select {
 		case <-pollCtx.Done():
-			t.Fatalf("timed out waiting for message on %s: %v", queue, pollCtx.Err())
+			t.Fatalf("timed out waiting for message on %s: %v", routingKey, pollCtx.Err())
 		default:
 		}
 
-		msg, ok, getErr := ch.Get(queue, false)
+		msg, ok, getErr := ch.Get(q.Name, false)
 		require.NoError(t, getErr)
 		if ok {
 			require.NoError(t, json.Unmarshal(msg.Body, &out))
@@ -209,15 +207,5 @@ func newComposeOrder(orderID, userID string, items []events.OrderLineItem, seq i
 			Items:     items,
 			Timestamp: now,
 		},
-	}
-}
-
-func purgeQueues(t *testing.T, ch *amqp.Channel, queues ...string) {
-	t.Helper()
-	for _, q := range queues {
-		_, err := ch.QueueDeclare(q, true, false, false, false, nil)
-		require.NoError(t, err)
-		_, err = ch.QueuePurge(q, false)
-		require.NoError(t, err)
 	}
 }

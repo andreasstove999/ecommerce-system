@@ -14,11 +14,6 @@ import (
 
 // TODO compare with cart-service-go/internal/events/rabbit.go there seems to be a lot of code duplication and some mismatches
 
-const (
-	OrderCreatedQueue   = "order.created"
-	OrderCompletedQueue = "order.completed"
-)
-
 type Publisher struct {
 	ch               *amqp.Channel
 	seqRepo          sequence.Repository
@@ -31,10 +26,8 @@ func NewPublisher(conn *amqp.Connection, seqRepo sequence.Repository, publishEnv
 		return nil, fmt.Errorf("open channel: %w", err)
 	}
 
-	// Declare queues so publish never fails due to missing infra
-	_, err = ch.QueueDeclare(OrderCreatedQueue, true, false, false, false, nil)
-	if err != nil {
-		return nil, fmt.Errorf("declare %s: %w", OrderCreatedQueue, err)
+	if err := declareEventsExchange(ch); err != nil {
+		return nil, fmt.Errorf("declare events exchange: %w", err)
 	}
 
 	return &Publisher{
@@ -72,7 +65,7 @@ func (p *Publisher) PublishOrderCreated(ctx context.Context, o *order.Order, met
 		if err != nil {
 			return fmt.Errorf("marshal OrderCreated legacy: %w", err)
 		}
-		return p.publishJSON(ctx, OrderCreatedQueue, body)
+		return p.publishJSON(ctx, OrderCreatedRoutingKey, body)
 	}
 
 	seq, err := p.seqRepo.NextSequence(ctx, o.ID)
@@ -86,7 +79,7 @@ func (p *Publisher) PublishOrderCreated(ctx context.Context, o *order.Order, met
 		return fmt.Errorf("marshal OrderCreated enveloped: %w", err)
 	}
 
-	return p.publishJSON(ctx, OrderCreatedQueue, body)
+	return p.publishJSON(ctx, OrderCreatedRoutingKey, body)
 }
 
 func (p *Publisher) PublishOrderCompleted(ctx context.Context, orderID, userID string, meta EnvelopeMetadata) error {
@@ -103,7 +96,7 @@ func (p *Publisher) PublishOrderCompleted(ctx context.Context, orderID, userID s
 			return fmt.Errorf("marshal OrderCompleted legacy: %w", err)
 		}
 
-		return p.publishJSON(ctx, OrderCompletedQueue, body)
+		return p.publishJSON(ctx, OrderCompletedRoutingKey, body)
 	}
 
 	seq, err := p.seqRepo.NextSequence(ctx, orderID)
@@ -117,7 +110,7 @@ func (p *Publisher) PublishOrderCompleted(ctx context.Context, orderID, userID s
 		return fmt.Errorf("marshal OrderCompleted enveloped: %w", err)
 	}
 
-	return p.publishJSON(ctx, OrderCompletedQueue, body)
+	return p.publishJSON(ctx, OrderCompletedRoutingKey, body)
 }
 
 func (p *Publisher) publishJSON(ctx context.Context, routingKey string, body []byte) error {
@@ -126,8 +119,8 @@ func (p *Publisher) publishJSON(ctx context.Context, routingKey string, body []b
 
 	return p.ch.PublishWithContext(
 		pubCtx,
-		"",         // default exchange
-		routingKey, // queue name as routing key
+		EventsExchange,
+		routingKey,
 		false,
 		false,
 		amqp.Publishing{

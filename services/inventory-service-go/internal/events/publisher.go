@@ -13,11 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	StockReservedQueue = "stock.reserved"
-	StockDepletedQueue = "stock.depleted"
-)
-
 type Publisher struct {
 	ch                 *amqp.Channel
 	seqRepo            *sequence.Repository
@@ -36,14 +31,8 @@ func NewPublisher(conn *amqp.Connection, seqRepo *sequence.Repository, opts Publ
 		return nil, fmt.Errorf("open channel: %w", err)
 	}
 
-	// Declare queues so publish never fails due to missing infra
-	_, err = ch.QueueDeclare(StockReservedQueue, true, false, false, false, nil)
-	if err != nil {
-		return nil, fmt.Errorf("declare %s: %w", StockReservedQueue, err)
-	}
-	_, err = ch.QueueDeclare(StockDepletedQueue, true, false, false, false, nil)
-	if err != nil {
-		return nil, fmt.Errorf("declare %s: %w", StockDepletedQueue, err)
+	if err := declareEventsExchange(ch); err != nil {
+		return nil, fmt.Errorf("declare events exchange: %w", err)
 	}
 
 	producer := opts.Producer
@@ -89,7 +78,7 @@ func (p *Publisher) PublishStockReserved(ctx context.Context, meta EventMeta, or
 		if err != nil {
 			return fmt.Errorf("marshal StockReserved: %w", err)
 		}
-		return p.publishJSON(ctx, StockReservedQueue, body)
+		return p.publishJSON(ctx, StockReservedRoutingKey, body)
 	}
 
 	payload := StockReservedPayload{
@@ -115,7 +104,7 @@ func (p *Publisher) PublishStockReserved(ctx context.Context, meta EventMeta, or
 		return fmt.Errorf("marshal StockReserved envelope: %w", err)
 	}
 
-	return p.publishJSON(ctx, StockReservedQueue, body)
+	return p.publishJSON(ctx, StockReservedRoutingKey, body)
 }
 
 func (p *Publisher) PublishStockDepleted(ctx context.Context, meta EventMeta, orderID, userID string, depleted []inventory.DepletedLine, reserved []inventory.Line) error {
@@ -145,7 +134,7 @@ func (p *Publisher) PublishStockDepleted(ctx context.Context, meta EventMeta, or
 		if err != nil {
 			return fmt.Errorf("marshal StockDepleted: %w", err)
 		}
-		return p.publishJSON(ctx, StockDepletedQueue, body)
+		return p.publishJSON(ctx, StockDepletedRoutingKey, body)
 	}
 
 	payload := StockDepletedPayload{
@@ -178,7 +167,7 @@ func (p *Publisher) PublishStockDepleted(ctx context.Context, meta EventMeta, or
 		return fmt.Errorf("marshal StockDepleted envelope: %w", err)
 	}
 
-	return p.publishJSON(ctx, StockDepletedQueue, body)
+	return p.publishJSON(ctx, StockDepletedRoutingKey, body)
 }
 
 func (p *Publisher) publishJSON(ctx context.Context, routingKey string, body []byte) error {
@@ -187,8 +176,8 @@ func (p *Publisher) publishJSON(ctx context.Context, routingKey string, body []b
 
 	return p.ch.PublishWithContext(
 		pubCtx,
-		"",         // default exchange
-		routingKey, // queue name as routing key
+		EventsExchange,
+		routingKey,
 		false,
 		false,
 		amqp.Publishing{

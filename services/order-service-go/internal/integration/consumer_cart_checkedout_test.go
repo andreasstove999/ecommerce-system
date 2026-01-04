@@ -45,15 +45,7 @@ func TestCartCheckedOutConsumer_CreatesOrder(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = ch.Close() })
 
-	_, err = ch.QueueDeclare(
-		events.QueueCartCheckedOut,
-		true,  // durable
-		false, // autoDelete
-		false, // exclusive
-		false, // noWait
-		nil,   // args
-	)
-	require.NoError(t, err)
+	require.NoError(t, ch.ExchangeDeclare(events.EventsExchange, "topic", true, false, false, false, nil))
 
 	payload := events.CartCheckedOutPayload{
 		CartID: "cart-100",
@@ -84,8 +76,8 @@ func TestCartCheckedOutConsumer_CreatesOrder(t *testing.T) {
 
 	err = ch.PublishWithContext(
 		ctx,
-		"",
-		events.QueueCartCheckedOut,
+		events.EventsExchange,
+		events.CartCheckedOutRoutingKey,
 		false,
 		false,
 		amqp.Publishing{
