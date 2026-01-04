@@ -54,6 +54,10 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 └── postman/
 ```
 
+## Contracts
+- `contracts/events` — event schemas
+- `contracts/http` — API gateway HTTP contract (OpenAPI)
+
 ---
 
 # 🔷 Tech Stack

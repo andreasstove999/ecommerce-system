@@ -256,6 +256,16 @@ services:
       retries: 10
 
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: swagger-ui
+    ports:
+      - "8090:8080"
+    volumes:
+      - ../contracts/http/bff/v1/openapi.yaml:/openapi.yaml
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+
 volumes:
   payment_db_data:
   catalog_db_data:

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/andreasstove999/ecommerce-system/api-gateway-go/internal/http/dto"
 )
 
 type httpResult struct {
@@ -55,18 +57,12 @@ func createProduct(ctx context.Context, t *testing.T, client *http.Client, baseU
 		t.Fatalf("unexpected status creating product: %d", resp.StatusCode)
 	}
 
-	var body map[string]any
-	decodeJSON(t, resp.Body, &body)
-	id, _ := body["id"].(string)
-	if id == "" {
-		if alt, ok := body["productId"].(string); ok {
-			id = alt
-		}
+	var product dto.Product
+	decodeJSON(t, resp.Body, &product)
+	if product.ID == "" {
+		t.Fatalf("missing product id in response: %+v", product)
 	}
-	if id == "" {
-		t.Fatalf("missing product id in response: %v", body)
-	}
-	return id
+	return product.ID
 }
 
 func adjustInventory(ctx context.Context, t *testing.T, client *http.Client, baseURL, productID, cid string) {
@@ -106,17 +102,14 @@ func pollOrders(ctx context.Context, t *testing.T, client *http.Client, baseURL,
 			resp := doRequest(ctx, t, client, http.MethodGet, baseURL+"/me/orders", "", headers)
 			ensureNon5xx(t, resp)
 
-			var orders []map[string]any
+			var orders []dto.Order
 			if err := json.Unmarshal(resp.Body, &orders); err != nil {
 				t.Fatalf("failed to decode orders: %v", err)
 			}
 			if len(orders) == 0 {
 				continue
 			}
-			if id, ok := orders[0]["orderId"].(string); ok && id != "" {
-				return id
-			}
-			if id, ok := orders[0]["id"].(string); ok && id != "" {
+			if id := orders[0].OrderID; id != "" {
 				return id
 			}
 		}
