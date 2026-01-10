@@ -19,6 +19,8 @@ The application is configured using `src/main/resources/application.yml` and env
 | `SPRING_DATASOURCE_USERNAME` | Database username | `catalog_user` |
 | `SPRING_DATASOURCE_PASSWORD` | Database password | `catalog_pass` |
 
+Flyway migrations are enabled by default and live under `src/main/resources/db/migration`.
+
 ## Running Locally
 
 To run the application locally using Maven:
@@ -51,13 +53,7 @@ Flyway is enabled and applies migrations from `src/main/resources/db/migration` 
 
 ## API Endpoints
 
-Catalog API:
-- `GET /api/catalog/products`
-- `GET /api/catalog/products/{id}`
-- `POST /api/catalog/products`
-- `GET /api/catalog/health`
-
-Actuator endpoints (if exposed):
-
-- `GET /actuator/health`: Health check
-- `GET /actuator/info`: Application info
+- `GET /api/catalog/health`: Health check
+- `GET /api/catalog/products`: List products
+- `GET /api/catalog/products/{id}`: Get product by ID
+- `POST /api/catalog/products`: Create a product

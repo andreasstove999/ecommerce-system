@@ -2,6 +2,13 @@
 
 This service manages carts for users and emits `CartCheckedOut` events when a checkout completes.
 
+## HTTP API
+
+- `GET /health`
+- `GET /api/cart/{userId}`
+- `POST /api/cart/{userId}/items`
+- `POST /api/cart/{userId}/checkout`
+
 ## Event publishing
 
 - Events are emitted using the v1 envelope contract under `contracts/events/cart/CartCheckedOut.v1.enveloped.schema.json`.

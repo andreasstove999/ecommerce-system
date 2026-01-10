@@ -92,11 +92,10 @@ docker compose up --build
 This starts:
 - RabbitMQ (UI at http://localhost:15672 — guest/guest)
 - All backend microservices
-- PostgreSQL databases, one per service
+- API Gateway (http://localhost:8080)
 - Swagger UI (http://localhost:8090)
-
-> Note: There is no frontend container in this repo right now. Use the API Gateway
-> directly (http://localhost:8080) or the Postman collection for local testing.
+- PostgreSQL databases, one per service
+> Note: A frontend container is not included in the current compose stack.
 
 ---
 

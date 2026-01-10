@@ -2,6 +2,12 @@
 
 Inventory service that consumes `OrderCreated` events, reserves stock, and emits either `StockReserved` or `StockDepleted`.
 
+## HTTP API
+
+- `GET /health`
+- `GET /api/inventory/{productId}`
+- `POST /api/inventory/adjust`
+
 ## Event contracts
 
 - Consumes `OrderCreated` v1 envelope from `order-service`.

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/andreasstove999/ecommerce-system/cart-service-go/internal/cart"
@@ -45,10 +48,32 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	logger.Printf("cart-service listening on :%s", port)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	errCh := make(chan error, 1)
+	go func() {
+		logger.Printf("cart-service listening on :%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		logger.Printf("shutdown signal received")
+	case err := <-errCh:
 		logger.Fatalf("server error: %v", err)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Printf("graceful shutdown error: %v", err)
+	}
+	if err := cartPublisher.Close(); err != nil {
+		logger.Printf("publisher close error: %v", err)
 	}
 }
 

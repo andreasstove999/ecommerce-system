@@ -9,6 +9,13 @@ RabbitMQ provides at-least-once delivery with no ordering guarantees. This desig
 - **Payload rules:** Domain data only—no `eventType`, no transport metadata.
 - **Versioning rules:** Schemas are immutable once published. Additive changes stay in the same major version; breaking changes require a new `eventVersion` and new files (e.g., `OrderCreated.v2.*`). Older versions remain available so consumers can upgrade independently.
 
+### Current implementation notes
+- `order-service-go` populates `schema` with the payload schema path (for example `contracts/events/order/OrderCreated.v1.payload.schema.json`).
+- `cart-service-go` and `inventory-service-go` currently set `schema` to the **enveloped** schema path instead of the payload schema path.
+- `payment-service-dotnet` publishes `PaymentSucceeded` / `PaymentFailed` with `schema=null` and `sequence=null`.
+
+Consumers should treat `schema` and `sequence` as advisory until the implementations are aligned with the canonical envelope contract.
+
 ### Envelope example (OrderCreated v1)
 ```json
 {

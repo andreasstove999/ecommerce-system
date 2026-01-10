@@ -83,8 +83,8 @@ sequenceDiagram
     participant INV as Inventory Service (Go)
     participant SHIP as Shipping Service (Java)
 
-    UI->>GW: POST /checkout
-    GW->>CART: POST /api/cart/checkout
+    UI->>GW: POST /me/cart/checkout
+    GW->>CART: POST /api/cart/{userId}/checkout
     CART-->>CART: Validate cart, persist checkout
     CART->>MQ: Publish CartCheckedOut
 
@@ -179,7 +179,7 @@ sequenceDiagram
 
 ### Cart Service (Go)
 - Manages user carts.
-- Exposes REST endpoints to add/remove items.
+- Exposes REST endpoints to add/update items and checkout.
 - Publishes **CartCheckedOut** when checkout occurs.
 
 ### Order Service (Go)
@@ -213,13 +213,23 @@ sequenceDiagram
 ### CartCheckedOut
 ```json
 {
-  "eventType": "CartCheckedOut",
-  "cartId": "c123",
-  "userId": "u42",
-  "items": [
-    { "productId": "p1", "quantity": 2, "price": 100.0 }
-  ],
-  "totalAmount": 200.0,
-  "timestamp": "2025-01-01T12:00:00Z"
+  "eventName": "CartCheckedOut",
+  "eventVersion": 1,
+  "eventId": "7c9c2aa9-3df6-4b92-8c45-3c6da0d4b1ad",
+  "correlationId": "4d9e3b13-4c72-4af5-a4a0-1d5d0c11aa71",
+  "producer": "cart-service",
+  "partitionKey": "c123",
+  "sequence": 12,
+  "occurredAt": "2025-01-01T12:00:00Z",
+  "schema": "contracts/events/cart/CartCheckedOut.v1.enveloped.schema.json",
+  "payload": {
+    "cartId": "c123",
+    "userId": "u42",
+    "items": [
+      { "productId": "p1", "quantity": 2, "price": 100.0 }
+    ],
+    "totalAmount": 200.0,
+    "timestamp": "2025-01-01T12:00:00Z"
+  }
 }
 ```

@@ -24,6 +24,13 @@ type RabbitCartEventsPublisher struct {
 	publishEnveloped   bool
 }
 
+func (p *RabbitCartEventsPublisher) Close() error {
+	if p == nil || p.ch == nil {
+		return nil
+	}
+	return p.ch.Close()
+}
+
 func NewRabbitCartEventsPublisher(conn *amqp.Connection, sequenceRepo SequenceRepository) (*RabbitCartEventsPublisher, error) {
 	ch, err := conn.Channel()
 	if err != nil {
