@@ -48,10 +48,9 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 │   ├── catalog-service-java/
 │   ├── payment-service-dotnet/
 │   └── shipping-service-java/
-├── frontend/
 ├── docker/
 ├── docs/
-└── postman/
+└── Postman-test-so-far/
 ```
 
 ## Contracts
@@ -90,8 +89,10 @@ docker compose up --build
 This starts:
 - RabbitMQ (UI at http://localhost:15672 — guest/guest)
 - All backend microservices
-- Frontend (http://localhost:3000 or 5173)
+- API Gateway (http://localhost:8080)
+- Swagger UI (http://localhost:8090)
 - PostgreSQL databases, one per service
+> Note: A frontend container is not included in the current compose stack.
 
 ---
 
@@ -113,11 +114,11 @@ This starts:
 | Event | Consumed By | Description |
 |--------|-------------|-------------|
 | `CartCheckedOut` | order-service-go | Creates an order based on cart data |
-| `OrderCreated` | inventory-service-go | Tries to reserve stock |
-| `StockReserved` | payment-service-dotnet | Attempts payment |
-| `PaymentSucceeded` | shipping-service-java | Issues shipping creation |
+| `OrderCreated` | inventory-service-go, payment-service-dotnet | Reserves stock / attempts payment |
+| `StockReserved` | order-service-go | Marks inventory as reserved on the order |
+| `PaymentSucceeded` | order-service-go | Marks payment as succeeded (may complete order) |
 | `PaymentFailed` | order-service-go | Cancels order |
-| `OrderCompleted` | frontend | Displays success to the user |
+| `OrderCompleted` | shipping-service-java | Issues shipping creation |
 
 ---
 
@@ -131,7 +132,7 @@ See [docs/messaging-topology.md](docs/messaging-topology.md) for full bindings p
 
 # 🔷 Testing
 
-A Postman collection is available under `postman/ecommerce-collection.json`.
+A Postman collection is available under `Postman-test-so-far/ecommerce-e2e.postman_collection.json`.
 It includes flows such as:
 - Create product
 - Add to cart
