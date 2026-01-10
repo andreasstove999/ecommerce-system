@@ -148,16 +148,18 @@
                     ]
                 },
                 {
-                    "name": "Shipping Health (TODO) - no health endpoint",
+                    "name": "Shipping Health",
                     "request": {
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{shippingBaseUrl}}/health",
+                            "raw": "{{shippingBaseUrl}}/api/shipping/health",
                             "host": [
                                 "{{shippingBaseUrl}}"
                             ],
                             "path": [
+                                "api",
+                                "shipping",
                                 "health"
                             ]
                         }
@@ -168,7 +170,8 @@
                             "script": {
                                 "type": "text/javascript",
                                 "exec": [
-                                    "pm.test('health may be missing', function(){ pm.expect([200,404]).to.include(pm.response.code); });"
+                                    "pm.test('status 200', ()=> pm.response.to.have.status(200));",
+                                    "pm.test('body ok', ()=> pm.expect(pm.response.text()).to.include('ok'));"
                                 ]
                             }
                         }

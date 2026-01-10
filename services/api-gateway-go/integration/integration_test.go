@@ -142,8 +142,37 @@ func waitForHealth(ctx context.Context, t *testing.T, client *http.Client, baseU
 		case <-ctx.Done():
 			t.Fatalf("context done while waiting for health: %v", ctx.Err())
 		case <-ticker.C:
+			// Check gateway health
 			resp := doRequest(ctx, t, client, http.MethodGet, baseURL+"/health", "", nil)
-			if resp.StatusCode == http.StatusOK {
+			if resp.StatusCode != http.StatusOK {
+				continue
+			}
+			// Check upstreams health
+			resp = doRequest(ctx, t, client, http.MethodGet, baseURL+"/health/upstreams", "", nil)
+			if resp.StatusCode != http.StatusOK {
+				continue
+			}
+
+			// Optional: Parse body to ensure shipping-service is OK
+			var payload struct {
+				Upstream []struct {
+					Name string `json:"name"`
+					OK   bool   `json:"ok"`
+				} `json:"upstream"`
+			}
+			if err := json.Unmarshal(resp.Body, &payload); err != nil {
+				continue
+			}
+
+			// Verify shipping is present and OK
+			shippingFound := false
+			for _, u := range payload.Upstream {
+				if u.Name == "shipping-service" && u.OK {
+					shippingFound = true
+					break
+				}
+			}
+			if shippingFound {
 				return
 			}
 		}
