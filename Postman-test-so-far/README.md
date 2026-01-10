@@ -26,6 +26,6 @@ This folder contains a Postman environment and collection that cover all REST en
 - Polling controls: `pollTry`/`pollMax` (orders), `inventoryPollTry`/`inventoryPollMax`, `paymentPollTry`/`paymentPollMax`, `shippingPollTry`/`shippingPollMax`.
 
 ## Known Limitations / TODOs
-- The shipping service does not expose a health endpoint; a placeholder request is included and accepts 200 or 404.
+- The shipping service exposes `GET /actuator/health`; update any placeholder request to use that endpoint.
 - Payment and shipping creation are event-driven; if the upstream events are not emitted, the polling steps will continue until the configured retry limit and then fail the assertion.
 - If catalog seeding is disabled or you prefer a fixed product ID, set `productId` manually before running the flow.

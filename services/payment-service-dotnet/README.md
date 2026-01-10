@@ -128,7 +128,7 @@ If you want real migrations later:
 ## Troubleshooting
 
 - **No events consumed**
-  - Verify the order service publishes to exchange `ecommerce.events` with routing key `order.created.v1`.
+  - Verify the order service publishes to queue `order.created` (default exchange).
   - If you override the exchange/routing key, ensure the queue binding matches in RabbitMQ UI.
 
 - **DB connection errors**

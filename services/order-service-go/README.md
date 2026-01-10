@@ -35,6 +35,14 @@ Publishes (to exchange `ecommerce.events`):
 - To rollback envelope consumption, set `CONSUME_ENVELOPED_EVENTS=false` so only legacy payloads are processed.
 - To rollback envelope publishing, set `PUBLISH_ENVELOPED_EVENTS=false` so the service emits the legacy payloads while leaving the database state intact.
 
+### Migrations
+- Migrations run automatically on startup using embedded SQL files in `internal/db/migrations`.
+
+## HTTP endpoints
+- `GET /health`
+- `GET /api/orders/{orderId}`
+- `GET /api/users/{userId}/orders`
+
 ## Running tests
 
 ```bash

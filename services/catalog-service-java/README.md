@@ -47,6 +47,10 @@ docker run -p 8086:8086 -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.i
 
 *Note: `host.docker.internal` is used to access the host's Postgres database from within the container. Adjust as necessary for your network setup.*
 
+## Database migrations
+
+Flyway is enabled and applies migrations from `src/main/resources/db/migration` on startup.
+
 ## API Endpoints
 
 - `GET /api/catalog/health`: Health check

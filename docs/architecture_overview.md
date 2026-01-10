@@ -114,6 +114,9 @@ sequenceDiagram
     SHIP->>MQ: ShippingCreated
 ```
 
+> Note: When inventory cannot fully reserve stock it publishes `StockDepleted`; there is
+> no consumer for that event yet.
+
 ---
 
 ## Event Contracts & Versioning (Option A)
@@ -192,14 +195,16 @@ sequenceDiagram
 ### Inventory Service (Go)
 - Listens to **OrderCreated**.
 - Reserves stock.
-- Publishes **StockReserved** or **StockDepleted**.
+- Publishes **StockReserved** or **StockDepleted** (no consumer yet for **StockDepleted**).
 
 ### Shipping Service (Java)
 - Listens to **OrderCompleted**.
 - Simulates shipment label creation.
 - Publishes **ShippingCreated**.
 
-TODO: Catalog Service (Java)    
+### Catalog Service (Java)
+- Provides product catalog CRUD for the gateway.
+- Exposes `/api/catalog/products` and `/api/catalog/health`.
 
 ---
 
@@ -228,4 +233,3 @@ TODO: Catalog Service (Java)
   }
 }
 ```
-

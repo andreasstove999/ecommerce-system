@@ -30,13 +30,19 @@ Use these flags for rollout/rollback without redeploying code.
 
 ## Configuration
 
-| Name | Default | Description |
-| ---- | ------- | ----------- |
-| `HTTP_ADDR` | `:8080` | HTTP bind address for the service. |
-| `DATABASE_DSN` | `postgres://postgres:postgres@localhost:5432/inventory?sslmode=disable` | PostgreSQL DSN for inventory DB. |
-| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string. |
-| `RUN_MIGRATIONS` | `true` | Run SQL migrations on startup. |
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HTTP_ADDR` | `:8080` | HTTP listen address |
+| `DATABASE_DSN` | `postgres://postgres:postgres@localhost:5432/inventory?sslmode=disable` | PostgreSQL DSN |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string |
+| `RUN_MIGRATIONS` | `true` | Run embedded migrations on startup |
+| `CONSUME_ENVELOPED_EVENTS` | `true` | Expect v1 enveloped events (`false` = legacy payloads only) |
+| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (`false` = legacy payloads only) |
 
-## Migrations
+### Migrations
+- Migrations run from embedded SQL files in `internal/db/migrations` when `RUN_MIGRATIONS=true`.
 
-Migrations are stored in `internal/db/migrations` and run on startup when `RUN_MIGRATIONS=true`.
+## HTTP endpoints
+- `GET /health`
+- `GET /api/inventory/{productId}`
+- `POST /api/inventory/adjust`

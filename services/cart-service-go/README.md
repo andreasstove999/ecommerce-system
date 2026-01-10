@@ -31,16 +31,21 @@ This service manages carts for users and emits `CartCheckedOut` events when a ch
 
 ## Configuration
 
-| Name | Default | Description |
-| ---- | ------- | ----------- |
-| `PORT` | `8081` | HTTP port for the service. |
-| `CART_DB_DSN` | _required_ | PostgreSQL DSN for the cart database. |
-| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string. |
-| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (set to `false` for legacy payloads). |
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `8081` | HTTP port for the cart service |
+| `CART_DB_DSN` | _required_ | PostgreSQL DSN for the cart database |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string |
+| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (`false` = legacy payloads only) |
 
-## Database setup
+### Migrations
+- Migrations run automatically on startup using embedded SQL files in `internal/db/migrations`.
 
-The service runs embedded SQL migrations on startup (see `internal/db/migrations`). For Docker Compose, Postgres also loads `internal/db/schema.sql` on first boot; the migrations are idempotent against that schema.
+## HTTP endpoints
+- `GET /health`
+- `GET /api/cart/{userId}`
+- `POST /api/cart/{userId}/items`
+- `POST /api/cart/{userId}/checkout`
 
 ## Running tests
 

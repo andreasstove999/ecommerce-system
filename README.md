@@ -29,12 +29,13 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 - `CartCheckedOut`
 - `OrderCreated`
 - `StockReserved`
+- `StockDepleted`
 - `PaymentSucceeded`
 - `PaymentFailed`
 - `OrderCompleted`
 - `ShippingCreated`
 
-> For architecture diagrams, see: `docs/architecture-overview.md`
+> For architecture diagrams, see: `docs/architecture_overview.md`
 
 ---
 
@@ -50,6 +51,7 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 │   └── shipping-service-java/
 ├── docker/
 ├── docs/
+├── contracts/
 └── Postman-test-so-far/
 ```
 
@@ -71,6 +73,7 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 ## Frontend
 - **React (Vite or CRA)**
 - Communicates with API Gateway via REST
+- Frontend source is not included in this repository
 
 ---
 
@@ -114,11 +117,13 @@ This starts:
 | Event | Consumed By | Description |
 |--------|-------------|-------------|
 | `CartCheckedOut` | order-service-go | Creates an order based on cart data |
-| `OrderCreated` | inventory-service-go, payment-service-dotnet | Reserves stock / attempts payment |
-| `StockReserved` | order-service-go | Marks inventory as reserved on the order |
-| `PaymentSucceeded` | order-service-go | Marks payment as succeeded (may complete order) |
-| `PaymentFailed` | order-service-go | Cancels order |
-| `OrderCompleted` | shipping-service-java | Issues shipping creation |
+| `OrderCreated` | inventory-service-go, payment-service-dotnet | Reserves stock and attempts payment |
+| `StockReserved` | order-service-go | Marks inventory as reserved |
+| `StockDepleted` | — | Emitted on insufficient stock (no consumer yet) |
+| `PaymentSucceeded` | order-service-go | Marks payment as succeeded |
+| `PaymentFailed` | order-service-go | Marks payment as failed |
+| `OrderCompleted` | shipping-service-java | Creates shipment |
+| `ShippingCreated` | — | Emitted after shipment creation (no consumer yet) |
 
 ---
 
@@ -132,7 +137,8 @@ See [docs/messaging-topology.md](docs/messaging-topology.md) for full bindings p
 
 # 🔷 Testing
 
-A Postman collection is available under `Postman-test-so-far/ecommerce-e2e.postman_collection.json`.
+A Postman collection is available under `Postman-test-so-far/ecommerce-e2e.postman_collection.json`
+with the environment in `Postman-test-so-far/ecommerce-local.postman_enviroment.json`.
 It includes flows such as:
 - Create product
 - Add to cart
