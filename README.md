@@ -29,12 +29,13 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 - `CartCheckedOut`
 - `OrderCreated`
 - `StockReserved`
+- `StockDepleted`
 - `PaymentSucceeded`
 - `PaymentFailed`
 - `OrderCompleted`
 - `ShippingCreated`
 
-> For architecture diagrams, see: `docs/architecture-overview.md`
+> For architecture diagrams, see: `docs/architecture_overview.md`
 
 ---
 
@@ -48,10 +49,10 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 │   ├── catalog-service-java/
 │   ├── payment-service-dotnet/
 │   └── shipping-service-java/
-├── frontend/
 ├── docker/
 ├── docs/
-└── postman/
+├── contracts/
+└── Postman-test-so-far/
 ```
 
 ## Contracts
@@ -72,6 +73,7 @@ All services communicate asynchronously through **RabbitMQ**, exchanging domain 
 ## Frontend
 - **React (Vite or CRA)**
 - Communicates with API Gateway via REST
+- Frontend source is not included in this repository
 
 ---
 
@@ -90,8 +92,11 @@ docker compose up --build
 This starts:
 - RabbitMQ (UI at http://localhost:15672 — guest/guest)
 - All backend microservices
-- Frontend (http://localhost:3000 or 5173)
 - PostgreSQL databases, one per service
+- Swagger UI (http://localhost:8090)
+
+> Note: There is no frontend container in this repo right now. Use the API Gateway
+> directly (http://localhost:8080) or the Postman collection for local testing.
 
 ---
 
@@ -113,11 +118,13 @@ This starts:
 | Event | Consumed By | Description |
 |--------|-------------|-------------|
 | `CartCheckedOut` | order-service-go | Creates an order based on cart data |
-| `OrderCreated` | inventory-service-go | Tries to reserve stock |
-| `StockReserved` | payment-service-dotnet | Attempts payment |
-| `PaymentSucceeded` | shipping-service-java | Issues shipping creation |
-| `PaymentFailed` | order-service-go | Cancels order |
-| `OrderCompleted` | frontend | Displays success to the user |
+| `OrderCreated` | inventory-service-go, payment-service-dotnet | Reserves stock and attempts payment |
+| `StockReserved` | order-service-go | Marks inventory as reserved |
+| `StockDepleted` | — | Emitted on insufficient stock (no consumer yet) |
+| `PaymentSucceeded` | order-service-go | Marks payment as succeeded |
+| `PaymentFailed` | order-service-go | Marks payment as failed |
+| `OrderCompleted` | shipping-service-java | Creates shipment |
+| `ShippingCreated` | — | Emitted after shipment creation (no consumer yet) |
 
 ---
 
@@ -131,7 +138,8 @@ See [docs/messaging-topology.md](docs/messaging-topology.md) for full bindings p
 
 # 🔷 Testing
 
-A Postman collection is available under `postman/ecommerce-collection.json`.
+A Postman collection is available under `Postman-test-so-far/ecommerce-e2e.postman_collection.json`
+with the environment in `Postman-test-so-far/ecommerce-local.postman_enviroment.json`.
 It includes flows such as:
 - Create product
 - Add to cart

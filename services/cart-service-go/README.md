@@ -22,6 +22,24 @@ This service manages carts for users and emits `CartCheckedOut` events when a ch
 - By default, the service publishes the enveloped event to the existing routing key/queue.
 - Set `PUBLISH_ENVELOPED_EVENTS=false` to temporarily publish only the legacy (bare payload) shape for rollback scenarios.
 
+## Configuration
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `8081` | HTTP port for the cart service |
+| `CART_DB_DSN` | _required_ | PostgreSQL DSN for the cart database |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string |
+| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (`false` = legacy payloads only) |
+
+### Migrations
+- Migrations run automatically on startup using embedded SQL files in `internal/db/migrations`.
+
+## HTTP endpoints
+- `GET /health`
+- `GET /api/cart/{userId}`
+- `POST /api/cart/{userId}/items`
+- `POST /api/cart/{userId}/checkout`
+
 ## Running tests
 
 From the service directory:

@@ -27,6 +27,8 @@ OpenAPI is the canonical contract; DTOs should reflect it.
 ### Health
 - `GET /health` — gateway health
 - `GET /health/upstreams` — calls upstream services’ health endpoints
+  - Probes: cart (`/health`), order (`/health`), inventory (`/health`), catalog (`/api/catalog/health`), payment (`/health`)
+  - Shipping is not included in `/health/upstreams` yet
 
 ### Cart (current user)
 > Requires header `X-User-Id`
@@ -93,6 +95,7 @@ From the repo’s docker folder:
 
 ```bash
 docker compose up --build
+```
 
 ## Tests
 

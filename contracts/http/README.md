@@ -6,7 +6,7 @@ This folder contains the canonical **frontend contract** for the API Gateway (BF
 - The gateway DTOs in `services/api-gateway-go/internal/http/dto` mirror this contract.
 - OpenAPI is the source of truth; DTOs are generated/maintained to match it.
 
-> Suggested (comment-only) generation for frontend typings:
+> Suggested (comment-only) generation for frontend typings (if/when a frontend is added):
 >
 > ```bash
 > npx openapi-typescript ./contracts/http/bff/v1/openapi.yaml -o ./frontend/src/api.ts
@@ -22,4 +22,3 @@ You can visualize the OpenAPI contract using Swagger UI.
    docker compose up -d swagger-ui
    ```
 2. Open [http://localhost:8090](http://localhost:8090) in your browser.
-

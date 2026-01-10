@@ -21,3 +21,22 @@ Inventory service that consumes `OrderCreated` events, reserves stock, and emits
 - `PUBLISH_ENVELOPED_EVENTS` (default: `true`): When `false`, legacy payloads are published instead of the v1 envelopes.
 
 Use these flags for rollout/rollback without redeploying code.
+
+## Configuration
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HTTP_ADDR` | `:8080` | HTTP listen address |
+| `DATABASE_DSN` | `postgres://postgres:postgres@localhost:5432/inventory?sslmode=disable` | PostgreSQL DSN |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string |
+| `RUN_MIGRATIONS` | `true` | Run embedded migrations on startup |
+| `CONSUME_ENVELOPED_EVENTS` | `true` | Expect v1 enveloped events (`false` = legacy payloads only) |
+| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (`false` = legacy payloads only) |
+
+### Migrations
+- Migrations run from embedded SQL files in `internal/db/migrations` when `RUN_MIGRATIONS=true`.
+
+## HTTP endpoints
+- `GET /health`
+- `GET /api/inventory/{productId}`
+- `POST /api/inventory/adjust`
