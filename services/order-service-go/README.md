@@ -1,11 +1,30 @@
 # Order Service (Go)
 
-This service consumes cart checkout events to create orders and publishes order lifecycle events via RabbitMQ.
+This service consumes checkout and fulfillment events to create and complete orders and publishes order lifecycle events via RabbitMQ.
+
+## HTTP endpoints
+
+- `GET /health`
+- `GET /api/orders/{orderId}`
+- `GET /api/users/{userId}/orders`
+
+## Messaging
+
+Consumes (from exchange `ecommerce.events`):
+- `cart.checkedout.v1`
+- `payment.succeeded.v1`
+- `payment.failed.v1`
+- `stock.reserved.v1`
+
+Publishes (to exchange `ecommerce.events`):
+- `order.created.v1`
+- `order.completed.v1`
 
 ## Environment variables
 
 | Name | Default | Description |
 | ---- | ------- | ----------- |
+| `PORT` | `8082` | HTTP port for the service. |
 | `ORDER_DB_DSN` | _required_ | PostgreSQL DSN for the order database. |
 | `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string. |
 | `CONSUME_ENVELOPED_EVENTS` | `true` | When `true`, the consumer expects v1 enveloped events (with payload fallback). Set to `false` to process only the legacy bare payload format. |
@@ -23,3 +42,7 @@ go test ./...
 ```
 
 Integration tests use Testcontainers; ensure Docker is available when running them.
+
+## Migrations
+
+Order service runs embedded SQL migrations on startup (see `internal/db/migrations`).

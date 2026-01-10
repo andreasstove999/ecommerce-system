@@ -2,6 +2,12 @@
 
 Inventory service that consumes `OrderCreated` events, reserves stock, and emits either `StockReserved` or `StockDepleted`.
 
+## HTTP API
+
+- `GET /health`
+- `GET /api/inventory/{productId}`
+- `POST /api/inventory/adjust`
+
 ## Event contracts
 
 - Consumes `OrderCreated` v1 envelope from `order-service`.
@@ -21,3 +27,16 @@ Inventory service that consumes `OrderCreated` events, reserves stock, and emits
 - `PUBLISH_ENVELOPED_EVENTS` (default: `true`): When `false`, legacy payloads are published instead of the v1 envelopes.
 
 Use these flags for rollout/rollback without redeploying code.
+
+## Configuration
+
+| Name | Default | Description |
+| ---- | ------- | ----------- |
+| `HTTP_ADDR` | `:8080` | HTTP bind address for the service. |
+| `DATABASE_DSN` | `postgres://postgres:postgres@localhost:5432/inventory?sslmode=disable` | PostgreSQL DSN for inventory DB. |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string. |
+| `RUN_MIGRATIONS` | `true` | Run SQL migrations on startup. |
+
+## Migrations
+
+Migrations are stored in `internal/db/migrations` and run on startup when `RUN_MIGRATIONS=true`.

@@ -2,6 +2,13 @@
 
 This service manages carts for users and emits `CartCheckedOut` events when a checkout completes.
 
+## HTTP API
+
+- `GET /health`
+- `GET /api/cart/{userId}`
+- `POST /api/cart/{userId}/items`
+- `POST /api/cart/{userId}/checkout`
+
 ## Event publishing
 
 - Events are emitted using the v1 envelope contract under `contracts/events/cart/CartCheckedOut.v1.enveloped.schema.json`.
@@ -21,6 +28,19 @@ This service manages carts for users and emits `CartCheckedOut` events when a ch
 
 - By default, the service publishes the enveloped event to the existing routing key/queue.
 - Set `PUBLISH_ENVELOPED_EVENTS=false` to temporarily publish only the legacy (bare payload) shape for rollback scenarios.
+
+## Configuration
+
+| Name | Default | Description |
+| ---- | ------- | ----------- |
+| `PORT` | `8081` | HTTP port for the service. |
+| `CART_DB_DSN` | _required_ | PostgreSQL DSN for the cart database. |
+| `RABBITMQ_URL` | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection string. |
+| `PUBLISH_ENVELOPED_EVENTS` | `true` | Publish v1 enveloped events (set to `false` for legacy payloads). |
+
+## Database setup
+
+The service runs embedded SQL migrations on startup (see `internal/db/migrations`). For Docker Compose, Postgres also loads `internal/db/schema.sql` on first boot; the migrations are idempotent against that schema.
 
 ## Running tests
 

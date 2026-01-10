@@ -12,9 +12,9 @@ It:
 ## Message topology
 
 RabbitMQ:
-- Exchange: `domain-events` (type: `topic`)
-- Queue: `payment-service`
-- Binding key: `OrderCreated.v1`
+- Exchange: `ecommerce.events` (type: `topic`)
+- Queue: `payment-service-dotnet.order.created.v1`
+- Binding key: `order.created.v1`
 
 Publishes:
 - `PaymentSucceeded.v1`
@@ -32,6 +32,8 @@ Envelope fields (see `src/PaymentService/Contracts/Envelope.cs`):
 - `occurredAt`
 - `schema`
 - `payload`
+
+> Note: this service publishes `PaymentSucceeded` / `PaymentFailed` with `sequence=null` and `schema=null` in the envelope. Incoming `OrderCreated` events are expected to carry `schema` from the order service.
 
 Example (trimmed):
 
@@ -77,7 +79,7 @@ Defaults are in `src/PaymentService/appsettings.json`.
 Common overrides via environment variables:
 - `ConnectionStrings__PaymentDb`
 - `RabbitMQ__Url`
-- `RabbitMQ__Exchange` (empty string = default exchange)
+- `RabbitMQ__Exchange` (defaults to `ecommerce.events`)
 - `RabbitMQ__Queue`
 - `RabbitMQ__RoutingKeyOrderCreated`
 
@@ -126,7 +128,7 @@ If you want real migrations later:
 ## Troubleshooting
 
 - **No events consumed**
-  - Verify the order service publishes to queue `order.created` (default exchange).
+  - Verify the order service publishes to exchange `ecommerce.events` with routing key `order.created.v1`.
   - If you override the exchange/routing key, ensure the queue binding matches in RabbitMQ UI.
 
 - **DB connection errors**

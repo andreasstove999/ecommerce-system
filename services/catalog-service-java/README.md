@@ -19,6 +19,8 @@ The application is configured using `src/main/resources/application.yml` and env
 | `SPRING_DATASOURCE_USERNAME` | Database username | `catalog_user` |
 | `SPRING_DATASOURCE_PASSWORD` | Database password | `catalog_pass` |
 
+Flyway migrations are enabled by default and live under `src/main/resources/db/migration`.
+
 ## Running Locally
 
 To run the application locally using Maven:
@@ -47,7 +49,7 @@ docker run -p 8086:8086 -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.i
 
 ## API Endpoints
 
-The service exposes the following standard Actuator endpoints:
-
-- `GET /actuator/health`: Health check
-- `GET /actuator/info`: Application info
+- `GET /api/catalog/health`: Health check
+- `GET /api/catalog/products`: List products
+- `GET /api/catalog/products/{id}`: Get product by ID
+- `POST /api/catalog/products`: Create a product
