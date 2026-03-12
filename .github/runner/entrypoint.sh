@@ -17,11 +17,8 @@ if [[ -n "${GITHUB_PAT:-}" ]]; then
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer ${GITHUB_PAT}" \
     "${API_URL}/actions/runners/registration-token" | jq -r '.token')"
-elif [[ -n "${REGISTRATION_TOKEN:-}" ]]; then
-  echo "Using pre-created REGISTRATION_TOKEN from environment..."
-  REGISTRATION_TOKEN="${REGISTRATION_TOKEN}"
 else
-  echo "Either GITHUB_PAT or REGISTRATION_TOKEN must be set."
+  echo "GITHUB_PAT must be set."
   exit 1
 fi
 
@@ -44,7 +41,7 @@ cleanup() {
   if [[ -n "${remove_token}" && "${remove_token}" != "null" ]]; then
     ./config.sh remove --unattended --token "${remove_token}" || true
   else
-    ./config.sh remove --unattended --token "${REGISTRATION_TOKEN}" || true
+    echo "Failed to deregister runner cleanly: could not get remove_token."
   fi
 }
 

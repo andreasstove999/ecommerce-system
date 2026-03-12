@@ -16,23 +16,13 @@ It is intended for GitHub Free usage where CI runs on your own machine instead o
 - Docker + Docker Compose plugin.
 - Access to repository settings on GitHub.
 
-## Authentication options
+## Authentication
 
-You can choose either option below.
-
-### Option A (recommended): `GITHUB_PAT`
 Use a GitHub Personal Access Token so the container can request short-lived registration/remove tokens automatically.
 
 Recommended minimum permissions:
 - Fine-grained PAT: repository access to this repo with **Administration: Read and write**.
 - Classic PAT fallback: `repo` scope (broad; use only if needed).
-
-### Option B: `REGISTRATION_TOKEN`
-Use a one-time registration token created from **Repository Settings → Actions → Runners → New self-hosted runner**.
-
-Notes:
-- Registration tokens expire quickly.
-- Automatic removal on shutdown is less reliable without a PAT.
 
 ## Setup
 
@@ -47,7 +37,7 @@ cp .env.example .env
 - `GITHUB_OWNER`
 - `GITHUB_REPOSITORY`
 - `GITHUB_RUNNER_NAME`
-- `GITHUB_PAT` **or** `REGISTRATION_TOKEN`
+- `GITHUB_PAT`
 
 3. Start runner:
 
