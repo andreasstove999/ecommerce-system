@@ -1,0 +1,26 @@
+services:
+  github-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        RUNNER_VERSION: ${RUNNER_VERSION:-2.326.0}
+    container_name: ecommerce-github-runner
+    env_file:
+      - .env
+    environment:
+      GITHUB_URL: ${GITHUB_URL:-https://github.com}
+      GITHUB_OWNER: ${GITHUB_OWNER}
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}
+      GITHUB_RUNNER_NAME: ${GITHUB_RUNNER_NAME:-ecommerce-self-hosted}
+      GITHUB_RUNNER_LABELS: ${GITHUB_RUNNER_LABELS:-self-hosted,linux,x64,ecommerce}
+      GITHUB_RUNNER_WORKDIR: ${GITHUB_RUNNER_WORKDIR:-_work}
+      GITHUB_PAT: ${GITHUB_PAT:-}
+      REGISTRATION_TOKEN: ${REGISTRATION_TOKEN:-}
+    volumes:
+      - runner-work:/opt/actions-runner/_work
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  runner-work:
