@@ -145,6 +145,28 @@ It includes flows such as:
 - Checkout cart
 - Observe async events triggering order, inventory, payment, and shipping workflows
 
+
+## Coverage gates (local + CI)
+
+Each service now includes a coverage gate script that can be run locally and in CI.
+
+```bash
+# Go services
+( cd services/api-gateway-go && ./scripts/check-coverage.sh )
+( cd services/cart-service-go && ./scripts/check-coverage.sh )
+( cd services/inventory-service-go && ./scripts/check-coverage.sh )
+( cd services/order-service-go && ./scripts/check-coverage.sh )
+
+# Java services
+( cd services/catalog-service-java && ./scripts/check-coverage.sh )
+( cd services/shipping-service-java && ./scripts/check-coverage.sh )
+
+# .NET service
+( cd services/payment-service-dotnet && ./scripts/check-coverage.sh )
+```
+
+Set `COVERAGE_THRESHOLD` to override the default line-coverage gate (`100` for Go/.NET, `1.0` for Java ratio).
+
 ---
 
 # 🔷 Possible Extensions
