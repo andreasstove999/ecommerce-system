@@ -21,10 +21,14 @@ RUN useradd -m -s /bin/bash runner \
 
 WORKDIR /opt/actions-runner
 
+USER runner
+
 RUN curl -fsSL -o actions-runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
     && tar xzf actions-runner.tar.gz \
-    && rm actions-runner.tar.gz \
-    && ./bin/installdependencies.sh
+    && rm actions-runner.tar.gz
+
+USER root
+RUN ./bin/installdependencies.sh
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
