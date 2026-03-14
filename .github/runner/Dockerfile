@@ -16,6 +16,7 @@ RUN apt-get update \
         sudo \
         lsb-release \
         software-properties-common \
+        maven \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Docker CLI (talks to the host daemon via the mounted socket) ─────
