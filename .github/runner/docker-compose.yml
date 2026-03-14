@@ -16,6 +16,8 @@ services:
       GITHUB_RUNNER_LABELS: ${GITHUB_RUNNER_LABELS:-self-hosted,linux,x64,ecommerce}
       GITHUB_RUNNER_WORKDIR: ${GITHUB_RUNNER_WORKDIR:-_work}
       GITHUB_PAT: ${GITHUB_PAT:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - runner-work:/opt/actions-runner/_work
       - /var/run/docker.sock:/var/run/docker.sock

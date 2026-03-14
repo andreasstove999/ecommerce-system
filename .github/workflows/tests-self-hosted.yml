@@ -1,10 +1,12 @@
 name: tests-self-hosted
 
 on:
-  pull_request:
   push:
     branches:
       - main
+      - codex/implement-self-hosted-github-actions-runner
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -44,6 +46,8 @@ jobs:
         run: docker compose up -d --wait
 
       - name: Run tests
+        env:
+          GATEWAY_URL: http://host.docker.internal:8080
         run: go test -tags integration ./...
 
       - name: Teardown docker compose for api-gateway
