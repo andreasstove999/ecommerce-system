@@ -13,7 +13,14 @@ API_URL="https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}"
 
 # ── Ensure the runner user can access the Docker socket ──────────────
 if [ -S /var/run/docker.sock ]; then
-  sudo chmod 666 /var/run/docker.sock
+  DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
+  if ! getent group "${DOCKER_GID}" > /dev/null 2>&1; then
+    sudo groupadd -g "${DOCKER_GID}" dockerhost
+  fi
+  DOCKER_GROUP="$(getent group "${DOCKER_GID}" | cut -d: -f1)"
+  if ! id -nG runner | grep -qw "${DOCKER_GROUP}"; then
+    sudo usermod -aG "${DOCKER_GROUP}" runner
+  fi
 fi
 
 # ── Ensure the runner owns its work directory (volume may be root) ────
@@ -74,4 +81,9 @@ fi
   --replace
 
 # ── Start the runner (with automatic retry on transient errors) ──────
-./run.sh
+if [ -S /var/run/docker.sock ]; then
+  # Use sudo to spawn run.sh as the same user so the new group membership takes effect
+  sudo -E -u runner ./run.sh
+else
+  ./run.sh
+fi

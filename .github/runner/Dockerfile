@@ -35,7 +35,9 @@ RUN useradd -m -s /bin/bash runner \
     && usermod -aG sudo runner \
     && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
     && mkdir -p /opt/actions-runner \
-    && chown -R runner:runner /opt/actions-runner
+    && chown -R runner:runner /opt/actions-runner \
+    && mkdir -p /usr/share/dotnet \
+    && chown -R runner:runner /usr/share/dotnet
 
 WORKDIR /opt/actions-runner
 
