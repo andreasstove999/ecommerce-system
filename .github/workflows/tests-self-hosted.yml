@@ -38,8 +38,18 @@ jobs:
           go-version-file: ${{ matrix.service }}/go.mod
           cache-dependency-path: ${{ matrix.service }}/go.sum
 
+      - name: Start docker compose for api-gateway
+        if: ${{ matrix.service == 'services/api-gateway-go' }}
+        working-directory: docker
+        run: docker compose up -d --wait
+
       - name: Run tests
         run: go test -tags integration ./...
+
+      - name: Teardown docker compose for api-gateway
+        if: ${{ always() && matrix.service == 'services/api-gateway-go' }}
+        working-directory: docker
+        run: docker compose down -v
 
   java-tests:
     name: java-tests (${{ matrix.service }})
