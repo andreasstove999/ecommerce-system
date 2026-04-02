@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 
+	orderdb "github.com/andreasstove999/ecommerce-system/order-service-go/internal/db"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -67,14 +67,7 @@ func StartPostgres(t *testing.T) (*sql.DB, func()) {
 	require.NoError(t, err)
 	require.NoError(t, waitForDB(ctx, db))
 
-	_, filename, _, ok := runtime.Caller(0)
-	require.True(t, ok, "failed to get current file path")
-	schemaPath := filepath.Join(filepath.Dir(filename), "..", "db", "schema.sql")
-
-	schema, err := os.ReadFile(schemaPath)
-	require.NoError(t, err)
-
-	_, err = db.ExecContext(ctx, string(schema))
+	err = orderdb.RunMigrations(dsn, log.New(os.Stdout, "[test] ", 0))
 	require.NoError(t, err)
 
 	cleanup := func() {
