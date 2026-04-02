@@ -161,3 +161,19 @@ It includes flows such as:
 - Show event-driven collaboration between services
 - Implement polyglot distributed system patterns
 - Full local reproducibility using Docker
+
+---
+
+# 🔷 Self-hosted CI (GitHub Actions)
+
+This repository includes an optional self-hosted CI workflow at:
+- `.github/workflows/tests-self-hosted.yml`
+
+It is designed for running tests on your own Docker-based GitHub Actions runner (GitHub Free friendly), documented in:
+- `.github/runner/README.md`
+
+Important behavior:
+- Jobs target `runs-on: [self-hosted, linux, x64, ecommerce]`.
+- If your self-hosted runner is offline, workflow jobs will queue until it comes back online.
+- PR merges are blocked only if you mark this workflow as a **required** check in GitHub branch protection.
+- To keep merges possible while the runner is offline, do **not** make `tests-self-hosted` a required status check.

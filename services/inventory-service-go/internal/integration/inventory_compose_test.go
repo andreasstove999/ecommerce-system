@@ -1,3 +1,5 @@
+//go:build compose
+
 package integration
 
 import (
