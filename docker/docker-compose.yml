@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -48,7 +46,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ../services/cart-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - cart_db_data:/var/lib/postgresql/data
   order-service-go:
     build:
       context: ../services/order-service-go
@@ -79,7 +77,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ../services/order-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - order_db_data:/var/lib/postgresql/data
 
   inventory-service-go:
     build:
@@ -115,7 +113,7 @@ services:
     ports:
       - "5435:5432"
     volumes:
-      - ../services/inventory-service-go/internal/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - inventory_db_data:/var/lib/postgresql/data
 
   payment-db:
     image: postgres:16
@@ -265,3 +263,6 @@ volumes:
   payment_db_data:
   catalog_db_data:
   shipping_db_data:
+  cart_db_data:
+  order_db_data:
+  inventory_db_data:
