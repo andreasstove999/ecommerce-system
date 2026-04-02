@@ -163,6 +163,28 @@ services:
     ports:
       - "8086:8086"
 
+  shipping-service-java:
+    build:
+      context: ../services/shipping-service-java
+      dockerfile: Dockerfile
+    container_name: shipping-service-java
+    environment:
+      - PORT=8087
+      - SPRING_RABBITMQ_ADDRESSES=rabbitmq:5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://shipping-db:5432/shipping_db
+      - SPRING_DATASOURCE_USERNAME=shipping_user
+      - SPRING_DATASOURCE_PASSWORD=shipping_pass
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      shipping-db:
+        condition: service_healthy
+    ports:
+      - "8087:8087"
+
   catalog-db:
     image: postgres:16
     container_name: catalog-db
@@ -179,30 +201,6 @@ services:
       - "5437:5432"
     volumes:
       - catalog_db_data:/var/lib/postgresql/data
-
-  shipping-service-java:
-    build:
-      context: ../services/shipping-service-java
-      dockerfile: Dockerfile
-    container_name: shipping-service-java
-    environment:
-      - PORT=8086
-
-      # Spring RabbitMQ (correct format)
-      - SPRING_RABBITMQ_ADDRESSES=rabbitmq:5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
-
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://shipping-db:5432/shipping_db
-      - SPRING_DATASOURCE_USERNAME=shipping_user
-      - SPRING_DATASOURCE_PASSWORD=shipping_pass
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      shipping-db:
-        condition: service_healthy
-    ports:
-      - "8087:8086"   
 
   shipping-db:
     image: postgres:16
@@ -236,7 +234,7 @@ services:
       - INVENTORY_URL=http://inventory-service-go:8083
       - CATALOG_URL=http://catalog-service-java:8086
       - PAYMENT_URL=http://payment-service-dotnet:8080
-      - SHIPPING_URL=http://shipping-service-java:8086
+      - SHIPPING_URL=http://shipping-service-java:8087
 
     depends_on:
       - cart-service-go

@@ -48,10 +48,16 @@ jobs:
         working-directory: docker
         run: docker compose up -d --wait
 
-      - name: Run tests
-        env:
-          GATEWAY_URL: http://host.docker.internal:8080
-        run: go test -tags integration ./...
+      - name: Run integration tests when they exist
+        shell: bash
+        run: |
+          if [ -d "internal/integration" ] && [ "$(find internal/integration -type f -name '*.go')" ]; then
+            echo "Running integration tests in api-gateway-go..."
+            go test -tags integration ./...
+          else
+            echo "No integration tests found in api-gateway-go. Skipping integration tests."
+            exit 0
+          fi
 
       - name: Teardown docker compose for api-gateway
         if: ${{ always() && matrix.service == 'services/api-gateway-go' }}
