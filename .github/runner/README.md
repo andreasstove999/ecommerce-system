@@ -1,7 +1,7 @@
 # Self-hosted GitHub Actions runner (Docker)
 
 This directory contains a minimal, single-runner Docker setup for this repository.
-It is intended for GitHub Free usage where CI runs on your own machine instead of paid GitHub-hosted runners.
+It is intended for GitHub Free usage where CI runs on your own machine instead of paid GitHub-hosted runners. It can also be used in other environments where you want to run CI jobs on your own infrastructure.
 
 ## What this does
 
