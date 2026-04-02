@@ -16,6 +16,7 @@ export interface Cart {
 export interface AddToCartInput {
   productId: string;
   quantity: number;
+  price: number;
 }
 
 export interface UpdateCartItemInput {

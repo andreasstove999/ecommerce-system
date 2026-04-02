@@ -22,7 +22,7 @@ export const ProductDetailsPage = () => {
       return;
     }
 
-    addToCartMutation.mutate({ productId: product.id, quantity: 1 });
+    addToCartMutation.mutate({ productId: product.id, quantity: 1, price: product.price });
   };
 
   return (
@@ -37,14 +37,16 @@ export const ProductDetailsPage = () => {
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h3">{product.name}</Typography>
-              {product.inStock ? <Chip color="success" label="In stock" /> : <Chip color="default" label="Out of stock" />}
+              {typeof product.inStock === 'boolean' ? (
+                product.inStock ? <Chip color="success" label="In stock" /> : <Chip color="default" label="Out of stock" />
+              ) : null}
             </Stack>
             <Typography color="text.secondary">{product.description}</Typography>
             <Typography fontWeight={700}>{formatCurrency(product.price)}</Typography>
             {addToCartMutation.isError ? <Alert severity="error">{toErrorMessage(addToCartMutation.error)}</Alert> : null}
             {addToCartMutation.isSuccess ? <Alert severity="success">Added to cart.</Alert> : null}
             <Stack direction="row" justifyContent="flex-start">
-              <AppButton onClick={handleAddToCart} disabled={addToCartMutation.isPending || !product.inStock}>
+              <AppButton onClick={handleAddToCart} disabled={addToCartMutation.isPending}>
                 {addToCartMutation.isPending ? 'Adding...' : 'Add to cart'}
               </AppButton>
             </Stack>

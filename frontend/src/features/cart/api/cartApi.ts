@@ -2,18 +2,18 @@ import { apiRequest } from '../../../lib/apiClient';
 import type { AddToCartInput, Cart, UpdateCartItemInput } from '../types/cart';
 
 export const getCart = async (): Promise<Cart> => {
-  return apiRequest<Cart>('/cart');
+  return apiRequest<Cart>('/me/cart');
 };
 
 export const addToCart = async (input: AddToCartInput): Promise<Cart> => {
-  return apiRequest<Cart>('/cart/items', {
+  return apiRequest<Cart>('/me/cart/items', {
     method: 'POST',
     body: input,
   });
 };
 
 export const updateCartItem = async (itemId: string, input: UpdateCartItemInput): Promise<Cart> => {
-  return apiRequest<Cart>(`/cart/items/${itemId}`, {
+  return apiRequest<Cart>(`/me/cart/items/${itemId}`, {
     method: 'PATCH',
     body: input,
   });
