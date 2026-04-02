@@ -1,0 +1,133 @@
+name: tests-self-hosted
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-self-hosted-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-tests:
+    name: go-tests (${{ matrix.service }})
+    runs-on: [self-hosted, linux, x64, ecommerce]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - services/api-gateway-go
+          - services/cart-service-go
+          - services/inventory-service-go
+          - services/order-service-go
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.service }}/go.mod
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+
+      - name: Start docker compose for api-gateway
+        if: ${{ matrix.service == 'services/api-gateway-go' }}
+        working-directory: docker
+        run: docker compose up -d --wait
+
+      - name: Run integration tests when they exist
+        shell: bash
+        run: |
+          if [ -d "internal/integration" ] && [ "$(find internal/integration -type f -name '*.go')" ]; then
+            echo "Running integration tests in api-gateway-go..."
+            go test -tags integration ./...
+          else
+            echo "No integration tests found in api-gateway-go. Skipping integration tests."
+            exit 0
+          fi
+
+      - name: Teardown docker compose for api-gateway
+        if: ${{ always() && matrix.service == 'services/api-gateway-go' }}
+        working-directory: docker
+        run: docker compose down -v
+
+  java-tests:
+    name: java-tests (${{ matrix.service }})
+    runs-on: [self-hosted, linux, x64, ecommerce]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - services/catalog-service-java
+          - services/shipping-service-java
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run tests when test sources exist
+        shell: bash
+        run: |
+          if [ -d src/test ]; then
+            mvn -B test
+          else
+            echo "No src/test directory in ${{ matrix.service }}. Skipping."
+          fi
+
+  dotnet-tests:
+    name: dotnet-tests (payment-service)
+    runs-on: [self-hosted, linux, x64, ecommerce]
+    defaults:
+      run:
+        working-directory: services/payment-service-dotnet/src/PaymentService
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests when test projects exist
+        shell: bash
+        run: |
+          mapfile -t test_projects < <(find .. -type f \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \))
+
+          if [ "${#test_projects[@]}" -eq 0 ]; then
+            echo "No .NET test project detected under services/payment-service-dotnet/src. Skipping dotnet test."
+            exit 0
+          fi
+
+          for project in "${test_projects[@]}"; do
+            echo "Running tests in ${project}"
+            dotnet test "${project}" --configuration Release
+          done

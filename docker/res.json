@@ -1,0 +1,1 @@
+{"service":"api-gateway","status":"ok","upstream":[{"name":"cart-service","ok":true,"statusCode":200},{"name":"order-service","ok":true,"statusCode":200},{"name":"inventory-service","ok":true,"statusCode":200},{"name":"catalog-service","ok":true,"statusCode":200},{"name":"payment-service","ok":true,"statusCode":200}]}
